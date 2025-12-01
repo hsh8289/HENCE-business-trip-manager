@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, MapPin, FileText, DollarSign, Car, Upload, Printer, Trash2, Plus, Save, Lock, LogOut, UserCog, RefreshCw, CheckCircle, Send, Edit3, XCircle, Users, AlertCircle, MessageSquare } from 'lucide-react';
+// [수정] 아이콘 이름 변경 (호환성 문제 해결): CheckCircle -> Check, Edit3 -> Edit, XCircle -> X
+import { Calendar, MapPin, FileText, DollarSign, Car, Upload, Printer, Trash2, Plus, Save, Lock, LogOut, UserCog, RefreshCw, Check, Send, Edit, X, Users, AlertCircle, MessageSquare } from 'lucide-react';
 
 // 유류비 기준 단가 (원/km)
 const FUEL_RATE_PERSONAL = 200; 
@@ -99,7 +100,7 @@ function RejectModal({ onClose, onConfirm }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 backdrop-blur-sm">
       <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-sm">
-        <h3 className="text-lg font-bold mb-4 text-red-600 flex items-center gap-2"><XCircle size={20}/> 반려 사유 작성</h3>
+        <h3 className="text-lg font-bold mb-4 text-red-600 flex items-center gap-2"><X size={20}/> 반려 사유 작성</h3>
         <textarea 
           className="w-full p-3 border border-gray-300 rounded-lg h-32 resize-none focus:ring-2 focus:ring-red-500 outline-none mb-4"
           placeholder="반려 사유를 입력하세요..."
@@ -170,7 +171,7 @@ function UserManagementModal({ onClose }) {
       <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-2xl h-[80vh] flex flex-col">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold flex items-center gap-2"><Users className="text-blue-600"/> 계정 관리</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><XCircle size={24} className="text-gray-500"/></button>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X size={24} className="text-gray-500"/></button>
         </div>
         
         {/* 사용자 등록 폼 */}
@@ -616,7 +617,7 @@ export default function App() {
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex justify-center gap-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10">
               <button onClick={() => setView('dashboard')} className="px-6 py-3 rounded-xl font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 transition">취소</button>
               <button onClick={handleSubmitClick} className="px-8 py-3 rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition flex items-center gap-2">
-                {editingId ? <><Edit3 size={18}/> 수정 완료 및 제출</> : <><CheckCircle size={18}/> 작성 완료 및 제출</>}
+                {editingId ? <><Edit size={18}/> 수정 완료 및 제출</> : <><Check size={18}/> 작성 완료 및 제출</>}
               </button>
             </div>
           </div>
@@ -637,15 +638,15 @@ export default function App() {
                     <button onClick={handleDelete} className="bg-white border border-red-200 text-red-600 px-4 py-2 rounded shadow hover:bg-red-50 font-bold flex items-center gap-2"><Trash2 size={16}/> 삭제</button>
                     {selectedReport.status !== 'approved' && (
                       <>
-                        <button onClick={handleRejectClick} className="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 font-bold flex items-center gap-2"><XCircle size={16}/> 반려</button>
-                        <button onClick={handleApprove} className="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 font-bold flex items-center gap-2"><CheckCircle size={16}/> 승인</button>
+                        <button onClick={handleRejectClick} className="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 font-bold flex items-center gap-2"><X size={16}/> 반려</button>
+                        <button onClick={handleApprove} className="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 font-bold flex items-center gap-2"><Check size={16}/> 승인</button>
                       </>
                     )}
                   </>
                 )}
                 {/* 직원 액션 (반려된 경우만 수정 가능) */}
                 {user.role === 'employee' && selectedReport.status === 'rejected' && (
-                  <button onClick={() => handleEdit(selectedReport)} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold flex items-center gap-2"><Edit3 size={16}/> 수정 및 재제출</button>
+                  <button onClick={() => handleEdit(selectedReport)} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold flex items-center gap-2"><Edit size={16}/> 수정 및 재제출</button>
                 )}
                 <button onClick={handlePrint} className="bg-gray-800 text-white px-4 py-2 rounded shadow hover:bg-gray-900 font-bold flex items-center gap-2"><Printer size={16}/> 인쇄</button>
               </div>
