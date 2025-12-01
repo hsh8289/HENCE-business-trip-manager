@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, MapPin, FileText, DollarSign, Car, Upload, Printer, Trash2, Plus, Save, Lock, LogOut, UserCog, RefreshCw, CheckCircle } from 'lucide-react';
+import { Calendar, MapPin, FileText, DollarSign, Car, Upload, Printer, Trash2, Plus, Save, Lock, LogOut, UserCog, RefreshCw, CheckCircle, Send, Edit3 } from 'lucide-react';
 
 // 유류비 기준 단가 (원/km) - 회사 내규에 따라 수정 가능
 const FUEL_RATE_PERSONAL = 200; 
@@ -328,27 +328,27 @@ export default function App() {
   const handleAdminLogin = (credentials) => { setIsAdminLoggedIn(true); setAdminCredentials(credentials); setActiveTab('admin'); };
   const handleAdminLogout = () => { setIsAdminLoggedIn(false); setActiveTab('report'); setSelectedReport(null); };
   const handleViewReport = (report) => { setSelectedReport(report); setActiveTab('preview'); };
+  
+  // 미리보기 화면에서 '내용 수정' 클릭 시 (초기화 하지 않고 돌아가기)
+  const handleEditContent = () => {
+    setActiveTab('report');
+  };
+
   const formatCurrency = (num) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(num);
 
   const renderPreview = (data) => (
     <div className="bg-gray-100 min-h-screen p-4 md:p-8 print:bg-white print:p-0">
       <style>{printStyles}</style>
       <div className="max-w-[210mm] mx-auto mb-6 flex flex-col md:flex-row justify-between items-center gap-4 print-hidden">
-        {isAdminLoggedIn && selectedReport ? (
+        {/* 미리보기 상단 메뉴 (관리자 모드일 때는 목록으로, 일반 사용자일 때는 버튼 없음) */}
+        {isAdminLoggedIn && selectedReport && (
           <button onClick={() => { setSelectedReport(null); setActiveTab('admin'); }} className="text-gray-600 hover:text-gray-900 font-bold flex items-center gap-1">
             &larr; 목록으로
           </button>
-        ) : (
-          <button onClick={() => setActiveTab('report')} className="text-gray-600 hover:text-gray-900 font-bold flex items-center gap-1">
-            &larr; 수정하기
-          </button>
         )}
-        <div className="flex gap-2 w-full md:w-auto">
-          {!isAdminLoggedIn && !selectedReport && (
-            <button onClick={handleSubmitReport} className="flex-1 md:flex-none bg-blue-600 text-white px-6 py-2.5 rounded-lg shadow-md hover:bg-blue-700 transition flex justify-center items-center gap-2 font-bold">
-              <CheckCircle size={18} /> 제출하기
-            </button>
-          )}
+        
+        {/* 인쇄 버튼은 항상 표시 (우측 정렬을 위해 div 유지) */}
+        <div className="flex gap-2 w-full md:w-auto justify-end">
           <button onClick={handlePrint} className="flex-1 md:flex-none bg-gray-800 text-white px-6 py-2.5 rounded-lg shadow-md hover:bg-gray-900 transition flex justify-center items-center gap-2 font-bold">
             <Printer size={18} /> 인쇄 / PDF
           </button>
@@ -453,25 +453,39 @@ export default function App() {
       <header className="bg-gradient-to-r from-blue-700 to-blue-600 text-white shadow-lg print-hidden sticky top-0 z-20">
         <div className="w-full max-w-[1920px] mx-auto px-4 md:px-8 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
           <h1 className="text-lg md:text-xl font-bold flex items-center gap-2 cursor-pointer hover:opacity-90 transition" onClick={() => !isAdminLoggedIn && setActiveTab('report')}>
-            <FileText size={24} className="text-blue-200" /> HENCE 출장 보고 및 비용 정산
+            <img src="https://i.imgur.com/Qc6M0kM.png" alt="HENCE 로고" className="h-8 mb-1" />
           </h1>
           <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
-            {!isAdminLoggedIn ? (
+            
+            {/* --- 일반 사용자 모드 버튼 --- */}
+            {!isAdminLoggedIn && activeTab === 'report' && (
               <>
                 <button onClick={handleResetForm} className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-blue-800 hover:bg-blue-900 rounded-lg text-sm transition text-blue-100">
                   <RefreshCw size={14} /> 초기화
                 </button>
-                <button onClick={handleSaveDraft} className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-400 rounded-lg text-sm transition shadow-sm">
-                  <Save size={16} /> 임시저장
-                </button>
-                <button onClick={() => { setActiveTab('report'); setSelectedReport(null); }} className={`flex-shrink-0 px-4 py-1.5 rounded-lg font-bold text-sm transition shadow-sm ${activeTab === 'report' ? 'bg-white text-blue-700' : 'bg-blue-800 text-white hover:bg-blue-900'}`}>
-                  작성하기
+                <button onClick={handleSubmitReport} className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-400 rounded-lg text-sm transition shadow-sm font-bold">
+                  <Send size={16} /> 제출하기
                 </button>
                 <button onClick={() => setIsAdminLoginModalOpen(true)} className="flex-shrink-0 px-4 py-1.5 rounded-lg font-bold text-sm transition bg-blue-900 text-white hover:bg-black flex items-center gap-1 shadow-sm">
                   <Lock size={14} /> 관리자
                 </button>
               </>
-            ) : (
+            )}
+
+            {/* --- 미리보기 모드 상단 메뉴 (요청하신 최적화 부분) --- */}
+            {!isAdminLoggedIn && activeTab === 'preview' && (
+              <>
+                 <button onClick={handleEditContent} className="flex-shrink-0 px-4 py-1.5 rounded-lg font-bold text-sm transition bg-white text-blue-700 hover:bg-blue-50 flex items-center gap-1 shadow-sm border border-blue-200">
+                  <Edit3 size={16} /> 내용 수정
+                </button>
+                <button onClick={handleSubmitReport} className="flex-shrink-0 flex items-center gap-1 px-4 py-1.5 bg-blue-500 hover:bg-blue-400 rounded-lg text-sm transition shadow-sm font-bold border border-blue-400">
+                  <Send size={16} /> 제출하기
+                </button>
+              </>
+            )}
+
+            {/* --- 관리자 모드 버튼 --- */}
+            {isAdminLoggedIn && (
               <button onClick={() => { setActiveTab('admin'); setSelectedReport(null); }} className={`flex-shrink-0 px-4 py-1.5 rounded-lg font-medium transition flex items-center gap-1 ${activeTab === 'admin' ? 'bg-white text-blue-700' : 'bg-blue-800 text-white'}`}>
                 <UserCog size={18} /> 관리자 모드
               </button>
@@ -483,7 +497,7 @@ export default function App() {
       <main className="w-full max-w-[1920px] mx-auto p-4 md:p-8 print:p-0">
         {activeTab === 'report' && !isAdminLoggedIn && (
           <div className="animate-fade-in print-hidden">
-            {/* 3단 레이아웃 그리드 (XL 이상에서 3열, LG에서 2열, 모바일 1열) */}
+            {/* 3단 레이아웃 그리드 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
               
               {/* [1열] 기본 정보 */}
