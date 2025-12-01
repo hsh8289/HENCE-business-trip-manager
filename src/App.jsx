@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, MapPin, FileText, DollarSign, Car, Upload, Printer, Trash2, Plus, Save, Lock, LogOut, UserCog, RefreshCw, Check, Send, Edit, X, Users, AlertCircle, MessageSquare, LogIn } from 'lucide-react';
+import { Calendar, MapPin, FileText, DollarSign, Car, Upload, Printer, Trash2, Plus, Save, Lock, LogOut, UserCog, RefreshCw, Check, Send, Edit, X, Users, AlertCircle, MessageSquare, LogIn, Briefcase, Shield } from 'lucide-react';
 
 // 유류비 기준 단가 (원/km)
 const FUEL_RATE_PERSONAL = 200; 
@@ -23,9 +23,9 @@ function getInitialFormData() {
 }
 
 // ----------------------------------------------------------------------
-// [컴포넌트] 로그인 모달 (팝업 형태)
+// [컴포넌트] 로그인 모달 (팝업 형태) - 역할 구분 추가
 // ----------------------------------------------------------------------
-function LoginModal({ onClose, onLogin }) {
+function LoginModal({ onClose, onLogin, targetRole }) {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -35,6 +35,13 @@ function LoginModal({ onClose, onLogin }) {
     const user = users.find(u => u.id === userId && u.password === password);
     
     if (user) {
+      // 역할 검증 로직 추가
+      if (targetRole && user.role !== targetRole) {
+        setError(targetRole === 'admin' 
+          ? '관리자 계정만 로그인할 수 있습니다.' 
+          : '일반 직원 계정만 로그인할 수 있습니다.');
+        return;
+      }
       onLogin(user);
       onClose();
     } else {
@@ -44,15 +51,19 @@ function LoginModal({ onClose, onLogin }) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md relative">
+      <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md relative border-t-4 border-blue-600">
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><X size={24}/></button>
         
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <Lock size={32} className="text-blue-600" />
+          <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${targetRole === 'admin' ? 'bg-purple-100' : 'bg-blue-100'}`}>
+            {targetRole === 'admin' ? <Shield size={32} className="text-purple-600" /> : <Briefcase size={32} className="text-blue-600" />}
           </div>
-          <h2 className="text-2xl font-bold text-gray-800">로그인</h2>
-          <p className="text-gray-500 mt-2 text-sm">보고서 작성 및 관리를 위해 로그인해주세요.</p>
+          <h2 className="text-2xl font-bold text-gray-800">
+            {targetRole === 'admin' ? '관리자 로그인' : '일반 직원 로그인'}
+          </h2>
+          <p className="text-gray-500 mt-2 text-sm">
+            {targetRole === 'admin' ? '관리자 계정으로 접속합니다.' : '보고서 작성을 위해 로그인해주세요.'}
+          </p>
         </div>
 
         {error && <div className="mb-4 p-3 bg-red-50 text-red-500 text-sm rounded-lg border border-red-100 flex items-center gap-2"><AlertCircle size={16}/>{error}</div>}
@@ -81,14 +92,17 @@ function LoginModal({ onClose, onLogin }) {
           </div>
           <button 
             onClick={handleSubmit}
-            className="w-full bg-blue-600 text-white py-3.5 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg mt-2"
+            className={`w-full text-white py-3.5 rounded-lg font-bold transition shadow-lg mt-2 ${targetRole === 'admin' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`}
           >
             로그인
           </button>
         </div>
-        <div className="mt-6 text-center text-sm text-gray-400">
-          * 초기 관리자: admin / admin
-        </div>
+        
+        {targetRole === 'admin' && (
+          <div className="mt-6 text-center text-sm text-gray-400">
+            * 초기 관리자: admin / admin
+          </div>
+        )}
       </div>
     </div>
   );
@@ -210,13 +224,13 @@ function UserManagementModal({ onClose }) {
 // [메인] App 컴포넌트
 // ----------------------------------------------------------------------
 export default function App() {
-  const [user, setUser] = useState(null); // 로그인 상태 (null이면 게스트)
+  const [user, setUser] = useState(null); 
   const [view, setView] = useState('dashboard');
   const [reports, setReports] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
   
   // 모달 상태
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginModalTarget, setLoginModalTarget] = useState(null); // 'admin' | 'employee' | null
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showResubmitModal, setShowResubmitModal] = useState(false);
   const [showUserManageModal, setShowUserManageModal] = useState(false);
@@ -272,7 +286,8 @@ export default function App() {
   // --- 작성 기능 ---
   const handleCreateReportClick = () => {
     if (!user) {
-      setShowLoginModal(true);
+      // 비로그인 상태에서 작성 시도 시 '직원 로그인'으로 유도
+      setLoginModalTarget('employee');
     } else {
       startWrite();
     }
@@ -383,9 +398,9 @@ export default function App() {
   `;
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-800 font-sans print:bg-white">
+    <div className="min-h-screen bg-gray-50 text-gray-800 font-sans print:bg-white flex flex-col items-center">
       {/* 상단 헤더 */}
-      <header className="bg-gradient-to-r from-blue-700 to-blue-600 text-white shadow-lg print-hidden sticky top-0 z-20">
+      <header className="bg-gradient-to-r from-blue-700 to-blue-600 text-white shadow-lg print-hidden sticky top-0 z-20 w-full">
         <div className="w-full max-w-[1920px] mx-auto px-4 md:px-8 py-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <h1 className="text-lg md:text-xl font-bold flex items-center gap-2 cursor-pointer hover:opacity-90 transition" onClick={() => setView('dashboard')}>
@@ -395,9 +410,15 @@ export default function App() {
           </div>
           <div className="flex gap-2">
             {!user ? (
-              <button onClick={() => setShowLoginModal(true)} className="text-sm bg-white text-blue-700 hover:bg-blue-50 px-4 py-1.5 rounded font-bold flex items-center gap-1 transition shadow-sm">
-                <LogIn size={14}/> 로그인
-              </button>
+              <>
+                {/* 로그인 버튼 분리: 직원용 / 관리자용 */}
+                <button onClick={() => setLoginModalTarget('employee')} className="text-sm bg-white text-blue-700 hover:bg-blue-50 px-4 py-1.5 rounded font-bold flex items-center gap-1 transition shadow-sm">
+                  <Briefcase size={14}/> 직원 로그인
+                </button>
+                <button onClick={() => setLoginModalTarget('admin')} className="text-sm bg-purple-700 text-white hover:bg-purple-800 px-4 py-1.5 rounded font-bold flex items-center gap-1 transition shadow-sm border border-purple-500">
+                  <Shield size={14}/> 관리자 로그인
+                </button>
+              </>
             ) : (
               <button onClick={handleLogout} className="text-sm bg-blue-800 hover:bg-blue-900 px-3 py-1.5 rounded flex items-center gap-1 transition"><LogOut size={14}/> 로그아웃</button>
             )}
@@ -405,7 +426,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="w-full max-w-[1920px] mx-auto p-4 md:p-8 print:p-0">
+      <main className="w-full max-w-[1920px] mx-auto p-4 md:p-8 print:p-0 flex-grow">
         
         {/* --- [대시보드] --- */}
         {view === 'dashboard' && (
@@ -426,7 +447,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden min-h-[500px]">
               <div className="p-5 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                 <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2">
                   <FileText size={20} className="text-gray-500"/> {user?.role === 'admin' ? '전체 제출된 보고서' : (user ? '나의 제출 이력' : '보고서 제출 이력 (로그인 필요)')}
@@ -435,10 +456,14 @@ export default function App() {
               </div>
               <div className="overflow-x-auto">
                 {!user ? (
-                  <div className="p-16 text-center text-gray-400">
-                    <Lock size={48} className="mx-auto mb-4 text-gray-300"/>
-                    <p className="text-lg font-bold">보고서 내역을 보려면 로그인이 필요합니다.</p>
-                    <button onClick={() => setShowLoginModal(true)} className="mt-4 text-blue-600 font-bold hover:underline">로그인하기</button>
+                  <div className="p-16 text-center text-gray-400 h-full flex flex-col justify-center items-center">
+                    <Lock size={64} className="mb-4 text-gray-300"/>
+                    <p className="text-xl font-bold mb-2">보고서 내역을 보려면 로그인이 필요합니다.</p>
+                    <p className="text-sm mb-6">우측 상단의 로그인 버튼을 이용해주세요.</p>
+                    <div className="flex gap-3">
+                      <button onClick={() => setLoginModalTarget('employee')} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold">직원 로그인</button>
+                      <button onClick={() => setLoginModalTarget('admin')} className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-bold">관리자 로그인</button>
+                    </div>
                   </div>
                 ) : (
                   <table className="w-full text-sm text-left text-gray-600 min-w-[800px]">
@@ -623,7 +648,7 @@ export default function App() {
         )}
 
         {/* 모달들 */}
-        {showLoginModal && <LoginModal onClose={() => setShowLoginModal(false)} onLogin={handleLogin} />}
+        {loginModalTarget && <LoginModal onClose={() => setLoginModalTarget(null)} onLogin={handleLogin} targetRole={loginModalTarget} />}
         {showRejectModal && <RejectModal onClose={() => setShowRejectModal(false)} onConfirm={confirmReject} />}
         {showResubmitModal && <ResubmitCommentModal onClose={() => setShowResubmitModal(false)} onConfirm={(comment) => { setShowResubmitModal(false); if(confirm('제출하시겠습니까?')) submitReport(comment); }} />}
         {showUserManageModal && <UserManagementModal onClose={() => setShowUserManageModal(false)} />}
