@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, MapPin, FileText, DollarSign, Car, Upload, Printer, Trash2, Plus, Save, Lock, LogOut, UserCog, RefreshCw, Check, Send, Edit, X, Users, AlertCircle, MessageSquare, LogIn, Briefcase, Shield } from 'lucide-react';
+import { Calendar, MapPin, FileText, DollarSign, Car, Upload, Printer, Trash2, Plus, Save, Lock, LogOut, UserCog, RefreshCw, Check, Send, Edit, X, Users, AlertCircle, MessageSquare, LogIn, Briefcase, Shield, Search, Filter } from 'lucide-react';
 
 // 유류비 기준 단가 (원/km)
 const FUEL_RATE_PERSONAL = 200; 
@@ -216,6 +216,141 @@ function UserManagementModal({ onClose }) {
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------
+// [관리자 대시보드] - 검색 및 필터링 기능 추가
+// ----------------------------------------------------------------------
+function AdminDashboard({ reports, onViewReport, onChangePassword, onLogout }) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'pending', 'approved', 'rejected'
+
+  // 필터링 로직
+  const filteredReports = reports.filter(report => {
+    // 1. 검색어 필터 (이름, 장소, 목적)
+    const lowerSearch = searchTerm.toLowerCase();
+    const matchesSearch = 
+      report.travelerName.toLowerCase().includes(lowerSearch) ||
+      report.location.toLowerCase().includes(lowerSearch) ||
+      report.purpose.toLowerCase().includes(lowerSearch);
+
+    // 2. 상태 필터
+    const matchesStatus = filterStatus === 'all' || report.status === filterStatus;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  // 상태 뱃지 렌더링 (테이블용)
+  const StatusBadge = ({ status }) => {
+    switch(status) {
+      case 'approved': return <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold border border-green-200">승인</span>;
+      case 'rejected': return <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-bold border border-red-200">반려</span>;
+      default: return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold border border-yellow-200">대기</span>;
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-8 animate-fade-in w-full max-w-[1920px] mx-auto">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h2 className="text-2xl font-bold flex items-center gap-2 text-gray-800">
+          <UserCog size={28} className="text-blue-600" /> 관리자 대시보드
+        </h2>
+        <div className="flex gap-2 w-full md:w-auto">
+          <button onClick={onChangePassword} className="flex-1 md:flex-none flex items-center justify-center gap-1 px-5 py-2.5 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg shadow-sm text-sm transition font-medium">
+            <UserCog size={16} /> 비밀번호 변경
+          </button>
+          <button onClick={onLogout} className="flex-1 md:flex-none flex items-center justify-center gap-1 px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-md text-sm transition font-bold">
+            <LogOut size={16} /> 로그아웃
+          </button>
+        </div>
+      </div>
+      
+      <section className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <div className="p-5 bg-gray-50 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
+          <h3 className="text-lg font-bold flex items-center gap-2 text-gray-700">
+            <FileText className="text-blue-600" size={20} /> 제출된 보고서 목록
+          </h3>
+          
+          {/* 검색 및 필터링 UI */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="이름, 장소, 목적 검색..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none w-full sm:w-64 text-sm"
+              />
+            </div>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <select 
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none appearance-none bg-white w-full sm:w-auto text-sm cursor-pointer"
+              >
+                <option value="all">전체 상태</option>
+                <option value="pending">대기 중</option>
+                <option value="approved">승인됨</option>
+                <option value="rejected">반려됨</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left text-gray-600 min-w-[800px]">
+            <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b">
+              <tr>
+                <th scope="col" className="px-6 py-4 font-bold">상태</th>
+                <th scope="col" className="px-6 py-4 font-bold">제출일</th>
+                <th scope="col" className="px-6 py-4 font-bold">출장자</th>
+                <th scope="col" className="px-6 py-4 font-bold">출장지</th>
+                <th scope="col" className="px-6 py-4 font-bold">기간</th>
+                <th scope="col" className="px-6 py-4 font-bold text-center">관리</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {filteredReports.length > 0 ? (
+                filteredReports.map((report) => (
+                  <tr key={report.id} className="bg-white hover:bg-blue-50 transition-colors group">
+                    <td className="px-6 py-4 whitespace-nowrap"><StatusBadge status={report.status} /></td>
+                    <td className="px-6 py-4 whitespace-nowrap">{new Date(report.submittedAt).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 font-bold text-gray-900">{report.travelerName}</td>
+                    <td className="px-6 py-4 truncate max-w-[200px] text-gray-700">{report.location}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-600">{report.startDate} ~ {report.endDate}</td>
+                    <td className="px-6 py-4 text-center">
+                      <button 
+                        onClick={() => onViewReport(report)} 
+                        className="inline-flex items-center gap-1 px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition text-xs font-bold shadow-sm"
+                      >
+                        <FileText size={12} /> 상세보기
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="px-6 py-16 text-center text-gray-400">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <div className="p-4 bg-gray-50 rounded-full">
+                        <FileText size={48} className="text-gray-300" />
+                      </div>
+                      <p className="text-base">조건에 맞는 보고서가 없습니다.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="p-4 bg-gray-50 border-t border-gray-200 text-right text-xs text-gray-500">
+          검색 결과: {filteredReports.length} / 전체: {reports.length}
+        </div>
+      </section>
     </div>
   );
 }
@@ -447,54 +582,64 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden min-h-[500px]">
-              <div className="p-5 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-                <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2">
-                  <FileText size={20} className="text-gray-500"/> {user?.role === 'admin' ? '전체 제출된 보고서' : (user ? '나의 제출 이력' : '보고서 제출 이력 (로그인 필요)')}
-                </h3>
-                {user && <span className="text-sm text-gray-500">총 {(user.role === 'admin' ? reports : reports.filter(r => r.userId === user.id)).length}건</span>}
-              </div>
-              <div className="overflow-x-auto">
-                {!user ? (
-                  <div className="p-16 text-center text-gray-400 h-full flex flex-col justify-center items-center">
-                    <Lock size={64} className="mb-4 text-gray-300"/>
-                    <p className="text-xl font-bold mb-2">보고서 내역을 보려면 로그인이 필요합니다.</p>
-                    <p className="text-sm mb-6">우측 상단의 로그인 버튼을 이용해주세요.</p>
-                    <div className="flex gap-3">
-                      <button onClick={() => setLoginModalTarget('employee')} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold">직원 로그인</button>
-                      <button onClick={() => setLoginModalTarget('admin')} className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-bold">관리자 로그인</button>
+            {/* 관리자 모드일 때만 AdminDashboard(필터링 포함) 렌더링, 아니면 기존 테이블 */}
+            {user?.role === 'admin' ? (
+              <AdminDashboard 
+                reports={reports} 
+                onViewReport={(report) => { setSelectedReport(report); setView('preview'); }}
+                onChangePassword={() => alert('기능 준비중입니다.')} // 임시
+                onLogout={handleLogout}
+              />
+            ) : (
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden min-h-[500px]">
+                <div className="p-5 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2">
+                    <FileText size={20} className="text-gray-500"/> {user ? '나의 제출 이력' : '보고서 제출 이력 (로그인 필요)'}
+                  </h3>
+                  {user && <span className="text-sm text-gray-500">총 {reports.filter(r => r.userId === user.id).length}건</span>}
+                </div>
+                <div className="overflow-x-auto">
+                  {!user ? (
+                    <div className="p-16 text-center text-gray-400 h-full flex flex-col justify-center items-center">
+                      <Lock size={64} className="mb-4 text-gray-300"/>
+                      <p className="text-xl font-bold mb-2">보고서 내역을 보려면 로그인이 필요합니다.</p>
+                      <p className="text-sm mb-6">우측 상단의 로그인 버튼을 이용해주세요.</p>
+                      <div className="flex gap-3">
+                        <button onClick={() => setLoginModalTarget('employee')} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold">직원 로그인</button>
+                        <button onClick={() => setLoginModalTarget('admin')} className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-bold">관리자 로그인</button>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <table className="w-full text-sm text-left text-gray-600 min-w-[800px]">
-                    <thead className="bg-gray-100 text-gray-700 uppercase font-bold text-xs border-b">
-                      <tr><th className="px-6 py-4">상태</th><th className="px-6 py-4">제출일</th><th className="px-6 py-4">작성자</th><th className="px-6 py-4">출장지</th><th className="px-6 py-4">기간</th><th className="px-6 py-4 text-center">관리</th></tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {(user.role === 'admin' ? reports : reports.filter(r => r.userId === user.id)).map((report) => (
-                        <tr key={report.id} className="hover:bg-blue-50 transition-colors">
-                          <td className="px-6 py-4"><StatusBadge status={report.status} /></td>
-                          <td className="px-6 py-4 text-gray-500">{new Date(report.submittedAt).toLocaleDateString()}</td>
-                          <td className="px-6 py-4 font-bold text-gray-900">{report.travelerName}</td>
-                          <td className="px-6 py-4 truncate max-w-[200px]">{report.location}</td>
-                          <td className="px-6 py-4 text-gray-500">{report.startDate} ~ {report.endDate}</td>
-                          <td className="px-6 py-4 text-center">
-                            <button onClick={() => { setSelectedReport(report); setView('preview'); }} className="bg-white border border-blue-200 text-blue-600 px-3 py-1 rounded hover:bg-blue-50 font-bold text-xs shadow-sm">상세보기</button>
-                            {/* [추가] 대기 상태일 때 바로 수정 버튼 표시 (직원용) */}
-                            {user.role === 'employee' && report.status === 'pending' && (
-                              <button onClick={() => handleEdit(report)} className="ml-2 bg-white border border-green-200 text-green-600 px-3 py-1 rounded hover:bg-green-50 font-bold text-xs shadow-sm">수정</button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                      {(user.role === 'admin' ? reports : reports.filter(r => r.userId === user.id)).length === 0 && (
-                        <tr><td colSpan="6" className="text-center py-16 text-gray-400">제출된 보고서가 없습니다.</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                )}
+                  ) : (
+                    <table className="w-full text-sm text-left text-gray-600 min-w-[800px]">
+                      <thead className="bg-gray-100 text-gray-700 uppercase font-bold text-xs border-b">
+                        <tr><th className="px-6 py-4">상태</th><th className="px-6 py-4">제출일</th><th className="px-6 py-4">작성자</th><th className="px-6 py-4">출장지</th><th className="px-6 py-4">기간</th><th className="px-6 py-4 text-center">관리</th></tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {reports.filter(r => r.userId === user.id).map((report) => (
+                          <tr key={report.id} className="hover:bg-blue-50 transition-colors">
+                            <td className="px-6 py-4"><StatusBadge status={report.status} /></td>
+                            <td className="px-6 py-4 text-gray-500">{new Date(report.submittedAt).toLocaleDateString()}</td>
+                            <td className="px-6 py-4 font-bold text-gray-900">{report.travelerName}</td>
+                            <td className="px-6 py-4 truncate max-w-[200px]">{report.location}</td>
+                            <td className="px-6 py-4 text-gray-500">{report.startDate} ~ {report.endDate}</td>
+                            <td className="px-6 py-4 text-center">
+                              <button onClick={() => { setSelectedReport(report); setView('preview'); }} className="bg-white border border-blue-200 text-blue-600 px-3 py-1 rounded hover:bg-blue-50 font-bold text-xs shadow-sm">상세보기</button>
+                              {/* [추가] 대기 상태일 때 바로 수정 버튼 표시 (직원용) */}
+                              {user.role === 'employee' && report.status === 'pending' && (
+                                <button onClick={() => handleEdit(report)} className="ml-2 bg-white border border-green-200 text-green-600 px-3 py-1 rounded hover:bg-green-50 font-bold text-xs shadow-sm">수정</button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                        {reports.filter(r => r.userId === user.id).length === 0 && (
+                          <tr><td colSpan="6" className="text-center py-16 text-gray-400">제출된 보고서가 없습니다.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
