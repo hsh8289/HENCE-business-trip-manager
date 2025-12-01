@@ -4,6 +4,24 @@ import { Calendar, MapPin, FileText, DollarSign, Car, Upload, Printer, Trash2, P
 // 유류비 기준 단가 (원/km)
 const FUEL_RATE_PERSONAL = 200; 
 
+// 초기 데이터 반환 함수 (컴포넌트 밖으로 이동하여 안정성 확보)
+function getInitialFormData() {
+  return {
+    startDate: '', 
+    endDate: '', 
+    travelerName: '', 
+    travelerCount: 1, 
+    location: '', 
+    purpose: '', 
+    content: '', 
+    vehicleType: 'company', 
+    distance: 0, 
+    fuelCost: 0,
+    expenses: [{ id: 1, category: '식비', description: '점심 식사', amount: 0 }], 
+    receipts: []
+  };
+}
+
 // ----------------------------------------------------------------------
 // [컴포넌트] 로그인 화면
 // ----------------------------------------------------------------------
@@ -74,7 +92,7 @@ function LoginScreen({ onLogin }) {
 }
 
 // ----------------------------------------------------------------------
-// [컴포넌트] 모달들 (반려사유, 재기안 코멘트, 계정관리)
+// [컴포넌트] 모달들
 // ----------------------------------------------------------------------
 function RejectModal({ onClose, onConfirm }) {
   const [reason, setReason] = useState('');
@@ -211,27 +229,20 @@ export default function App() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showResubmitModal, setShowResubmitModal] = useState(false);
   const [showUserManageModal, setShowUserManageModal] = useState(false);
-  const [rejectionNotification, setRejectionNotification] = useState(null); // 로그인 시 반려 알림용
+  const [rejectionNotification, setRejectionNotification] = useState(null); 
 
-  // 폼 데이터
+  // 폼 데이터 (getInitialFormData는 컴포넌트 밖으로 이동됨)
   const [formData, setFormData] = useState(getInitialFormData());
-
-  function getInitialFormData() {
-    return {
-      startDate: '', endDate: '', travelerName: '', travelerCount: 1, location: '', purpose: '', content: '', vehicleType: 'company', distance: 0, fuelCost: 0,
-      expenses: [{ id: 1, category: '식비', description: '점심 식사', amount: 0 }], receipts: []
-    };
-  }
+  
+  // 수정 중인 보고서 ID (null이면 새 보고서 작성 모드)
+  const [editingId, setEditingId] = useState(null);
 
   // 초기 데이터 로드 및 초기 관리자 계정 생성
   useEffect(() => {
-    // 1. 사용자 목록 초기화 (없으면 기본 관리자 생성)
     const storedUsers = localStorage.getItem('users');
     if (!storedUsers) {
       localStorage.setItem('users', JSON.stringify([{ id: 'admin', password: 'admin', name: '관리자', role: 'admin' }]));
     }
-
-    // 2. 보고서 목록 로드
     const storedReports = localStorage.getItem('reports');
     if (storedReports) {
       setReports(JSON.parse(storedReports));
@@ -241,15 +252,14 @@ export default function App() {
   // 로그인 처리
   const handleLogin = (loggedInUser) => {
     setUser(loggedInUser);
-    setFormData(prev => ({ ...prev, travelerName: loggedInUser.name })); // 작성자 이름 자동 입력
+    setFormData(prev => ({ ...prev, travelerName: loggedInUser.name }));
     
-    // 로그인 시 반려된 보고서가 있는지 확인 (직원인 경우)
+    // 로그인 시 반려된 보고서 확인
     if (loggedInUser.role === 'employee') {
       const myReports = JSON.parse(localStorage.getItem('reports') || '[]').filter(r => r.userId === loggedInUser.id);
       const rejected = myReports.find(r => r.status === 'rejected' && !r.checked);
       if (rejected) {
         setRejectionNotification(rejected);
-        // 확인 처리 (다시 알림 안 뜨게)
         updateReport(rejected.id, { checked: true });
       }
     }
@@ -261,9 +271,10 @@ export default function App() {
     setView('dashboard');
     setSelectedReport(null);
     setRejectionNotification(null);
+    setEditingId(null);
+    setFormData(getInitialFormData());
   };
 
-  // 데이터 저장 헬퍼
   const saveReportsToStorage = (newReports) => {
     setReports(newReports);
     localStorage.setItem('reports', JSON.stringify(newReports));
@@ -288,7 +299,6 @@ export default function App() {
     });
   };
 
-  // ... (경비, 파일 업로드 관련 기존 함수들 유지 - 간략화)
   const addExpense = () => {
     const newId = formData.expenses.length > 0 ? Math.max(...formData.expenses.map(e => e.id)) + 1 : 1;
     setFormData(prev => ({ ...prev, expenses: [...prev.expenses, { id: newId, category: '기타', description: '', amount: 0 }] }));
@@ -308,17 +318,29 @@ export default function App() {
   const removeReceipt = (id) => setFormData(prev => ({ ...prev, receipts: prev.receipts.filter(r => r.id !== id) }));
   const calculateTotal = (data = formData) => data.expenses.reduce((sum, item) => sum + item.amount, 0) + data.fuelCost;
 
-  // --- 제출 프로세스 ---
+  // --- [핵심] 새 보고서 작성 시작 ---
   const startWrite = () => {
+    // 폼 데이터 초기화
     setFormData({ ...getInitialFormData(), travelerName: user.name });
+    // 상태 초기화
     setSelectedReport(null);
+    setEditingId(null);
+    // 화면 전환
     setView('write');
   };
 
+  // --- 수정 모드 진입 ---
   const handleEdit = (report) => {
     setFormData(report);
     setSelectedReport(report);
+    setEditingId(report.id); // 수정 모드임을 표시
     setView('write');
+  };
+
+  const handleStartAdminEdit = () => {
+    if (selectedReport) {
+      handleEdit(selectedReport);
+    }
   };
 
   const submitReport = (comment = '') => {
@@ -326,33 +348,46 @@ export default function App() {
 
     const newReport = {
       ...formData,
-      id: selectedReport ? selectedReport.id : Date.now(),
+      id: editingId || Date.now(), // 수정이면 기존 ID, 아니면 새 ID
       userId: user.id,
-      submittedAt: new Date().toISOString(),
-      status: 'pending', // 제출 시 무조건 대기 상태 (수정 제출 포함)
-      resubmissionComment: comment || formData.resubmissionComment, // 재기안 코멘트 저장
-      rejectionReason: null // 반려 사유 초기화
+      submittedAt: editingId ? formData.submittedAt : new Date().toISOString(), // 수정이면 기존 제출일 유지
+      status: 'pending', 
+      resubmissionComment: comment || formData.resubmissionComment,
+      rejectionReason: null 
     };
 
     let updatedReports;
-    if (selectedReport) {
-      updatedReports = reports.map(r => r.id === selectedReport.id ? newReport : r);
+    if (editingId) {
+      // 기존 보고서 업데이트
+      updatedReports = reports.map(r => r.id === editingId ? newReport : r);
     } else {
+      // 새 보고서 추가
       updatedReports = [newReport, ...reports];
     }
 
     saveReportsToStorage(updatedReports);
-    alert('제출되었습니다.');
-    setView('dashboard');
+    
+    // 임시 저장 삭제 (새 제출일 경우만)
+    if (!editingId) localStorage.removeItem('tripReportDraft');
+
+    alert(editingId ? '수정되었습니다.' : '제출되었습니다.');
+    
+    // 초기화 및 이동
+    setEditingId(null);
     setSelectedReport(null);
+    
+    if (user.role === 'admin') {
+      setView('admin'); // 관리자는 목록으로
+    } else {
+      setView('dashboard'); // 직원은 대시보드로
+    }
   };
 
   const handleSubmitClick = () => {
-    // 반려된 보고서를 수정해서 내는 경우 코멘트 모달 띄움
     if (selectedReport && selectedReport.status === 'rejected') {
       setShowResubmitModal(true);
     } else {
-      if(confirm('제출하시겠습니까?')) submitReport();
+      if(confirm(editingId ? '수정된 내용을 저장하시겠습니까?' : '제출하시겠습니까?')) submitReport();
     }
   };
 
@@ -369,7 +404,7 @@ export default function App() {
   
   const confirmReject = (reason) => {
     if (!reason) return alert('반려 사유를 입력해야 합니다.');
-    updateReport(selectedReport.id, { status: 'rejected', rejectionReason: reason, checked: false }); // checked: false로 하여 유저 로그인시 알림
+    updateReport(selectedReport.id, { status: 'rejected', rejectionReason: reason, checked: false });
     setShowRejectModal(false);
     alert('반려 처리되었습니다.');
     setView('dashboard');
@@ -383,7 +418,20 @@ export default function App() {
     }
   };
 
-  // 상태 뱃지 렌더링
+  const handleResetForm = () => {
+    if(window.confirm('작성 중인 내용을 초기화하시겠습니까?')) {
+      setFormData({ ...getInitialFormData(), travelerName: user.name });
+      localStorage.removeItem('tripReportDraft');
+    }
+  };
+
+  // 임시 저장
+  const handleSaveDraft = () => {
+    const dataToSave = { ...formData, receipts: [] };
+    localStorage.setItem('tripReportDraft', JSON.stringify(dataToSave));
+    alert('임시 저장되었습니다.');
+  };
+
   const StatusBadge = ({ status }) => {
     switch(status) {
       case 'approved': return <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold border border-green-200">승인</span>;
@@ -392,8 +440,19 @@ export default function App() {
     }
   };
 
-  // 인쇄 기능
   const handlePrint = () => window.print();
+
+  // A4 Print Styles
+  const printStyles = `
+    @media print {
+      @page { size: A4; margin: 0; }
+      body { margin: 0; padding: 0; background-color: white; -webkit-print-color-adjust: exact; }
+      .print-hidden { display: none !important; }
+      .print-container { width: 210mm; min-height: 297mm; margin: 0; padding: 20mm; box-shadow: none; border: none; page-break-after: always; }
+    }
+    .a4-preview-container { width: 210mm; min-height: 297mm; padding: 20mm; margin: 0 auto; background: white; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb; }
+    @media (max-width: 768px) { .a4-preview-container { width: 100%; padding: 20px; min-height: auto; box-shadow: none; border: none; } }
+  `;
 
   // ----------------------------------------------------------------------
   // 렌더링
@@ -407,7 +466,6 @@ export default function App() {
         <div className="w-full max-w-[1920px] mx-auto px-4 md:px-8 py-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <h1 className="text-lg md:text-xl font-bold flex items-center gap-2 cursor-pointer hover:opacity-90 transition" onClick={() => setView('dashboard')}>
-              {/* [중요] 상단 제목은 텍스트+아이콘으로 유지. 변경 금지. */}
               <FileText size={24} /> HENCE 출장 보고 및 비용 정산
             </h1>
             <span className="text-sm bg-blue-800 px-3 py-1 rounded-full">{user.role === 'admin' ? '관리자 모드' : `${user.name} 님`}</span>
@@ -558,7 +616,7 @@ export default function App() {
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex justify-center gap-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10">
               <button onClick={() => setView('dashboard')} className="px-6 py-3 rounded-xl font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 transition">취소</button>
               <button onClick={handleSubmitClick} className="px-8 py-3 rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition flex items-center gap-2">
-                {selectedReport ? <><Edit3 size={18}/> 수정 완료 및 제출</> : <><CheckCircle size={18}/> 작성 완료 및 제출</>}
+                {editingId ? <><Edit3 size={18}/> 수정 완료 및 제출</> : <><CheckCircle size={18}/> 작성 완료 및 제출</>}
               </button>
             </div>
           </div>
