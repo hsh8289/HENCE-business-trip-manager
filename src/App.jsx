@@ -533,7 +533,7 @@ export default function App() {
       <header className="bg-gradient-to-r from-blue-700 to-blue-600 text-white shadow-lg print-hidden sticky top-0 z-20">
         <div className="w-full max-w-[1920px] mx-auto px-4 md:px-8 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
           <h1 className="text-lg md:text-xl font-bold flex items-center gap-2 cursor-pointer hover:opacity-90 transition" onClick={() => !isAdminLoggedIn && setActiveTab('report')}>
-            <img src="https://i.imgur.com/Qc6M0kM.png" alt="HENCE 로고" className="h-8 mb-1" />
+            <FileText size={24} /> HENCE 출장 보고 및 비용 정산
           </h1>
           <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
             
