@@ -270,12 +270,11 @@ export default function App() {
   };
 
   // --- 작성 기능 ---
-  // 새 보고서 작성 버튼 클릭 시
   const handleCreateReportClick = () => {
     if (!user) {
-      setShowLoginModal(true); // 비로그인 시 로그인 유도
+      setShowLoginModal(true);
     } else {
-      startWrite(); // 로그인 상태면 작성 시작
+      startWrite();
     }
   };
 
@@ -421,7 +420,6 @@ export default function App() {
                     <Users size={18}/> 계정 관리
                   </button>
                 )}
-                {/* 로그인 안해도 버튼은 보이고, 누르면 로그인 모달 뜸 */}
                 <button onClick={handleCreateReportClick} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-bold flex items-center gap-2 shadow-md transition">
                   <Plus size={18}/> 새 보고서 작성
                 </button>
@@ -457,6 +455,10 @@ export default function App() {
                           <td className="px-6 py-4 text-gray-500">{report.startDate} ~ {report.endDate}</td>
                           <td className="px-6 py-4 text-center">
                             <button onClick={() => { setSelectedReport(report); setView('preview'); }} className="bg-white border border-blue-200 text-blue-600 px-3 py-1 rounded hover:bg-blue-50 font-bold text-xs shadow-sm">상세보기</button>
+                            {/* [추가] 대기 상태일 때 바로 수정 버튼 표시 (직원용) */}
+                            {user.role === 'employee' && report.status === 'pending' && (
+                              <button onClick={() => handleEdit(report)} className="ml-2 bg-white border border-green-200 text-green-600 px-3 py-1 rounded hover:bg-green-50 font-bold text-xs shadow-sm">수정</button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -562,8 +564,9 @@ export default function App() {
                     )}
                   </>
                 )}
-                {user?.role === 'employee' && selectedReport.status === 'rejected' && (
-                  <button onClick={() => handleEdit(selectedReport)} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold flex items-center gap-2"><Edit size={16}/> 수정 및 재제출</button>
+                {/* [수정] 대기(pending) 상태이거나 반려(rejected) 상태일 때 수정 버튼 표시 */}
+                {user?.role === 'employee' && (selectedReport.status === 'rejected' || selectedReport.status === 'pending') && (
+                  <button onClick={() => handleEdit(selectedReport)} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold flex items-center gap-2"><Edit size={16}/> {selectedReport.status === 'rejected' ? '수정 및 재제출' : '내용 수정'}</button>
                 )}
                 <button onClick={handlePrint} className="bg-gray-800 text-white px-4 py-2 rounded shadow hover:bg-gray-900 font-bold flex items-center gap-2"><Printer size={16}/> 인쇄</button>
               </div>
