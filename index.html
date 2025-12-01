@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>출장 보고 및 비용 정산</title>
+    <!-- Tailwind CSS를 불러오는 마법의 코드 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 인쇄할 때 브라우저 기본 스타일 초기화 등을 위한 설정 -->
+    <style>
+      @media print {
+        @page {
+          margin: 0;
+          size: auto;
+        }
+        body {
+          margin: 1.6cm;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
