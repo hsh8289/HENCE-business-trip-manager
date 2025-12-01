@@ -569,7 +569,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* 반려 사유 */}
+            {/* 반려 사유 (화면 표시용) */}
             {selectedReport.status === 'rejected' && selectedReport.rejectionReason && (
               <div className="max-w-[210mm] mx-auto mb-6 bg-red-50 border border-red-200 p-4 rounded-lg flex items-start gap-3 print-hidden">
                 <AlertCircle className="text-red-600 flex-shrink-0 mt-1"/>
@@ -582,6 +582,15 @@ export default function App() {
               {selectedReport.status === 'approved' && <div className="absolute top-10 right-10 border-4 border-green-600 text-green-600 rounded-full w-32 h-32 flex items-center justify-center transform rotate-[-15deg] opacity-80 pointer-events-none"><div className="text-center"><div className="text-sm font-bold border-b border-green-600 pb-1 mb-1">{new Date().toLocaleDateString()}</div><div className="text-2xl font-black">승 인</div><div className="text-xs font-bold mt-1">HENCE 관리자</div></div></div>}
               {selectedReport.status === 'rejected' && <div className="absolute top-10 right-10 border-4 border-red-600 text-red-600 rounded-full w-32 h-32 flex items-center justify-center transform rotate-[-15deg] opacity-80 pointer-events-none"><div className="text-2xl font-black">반 려</div></div>}
               <h1 className="text-3xl font-bold text-center mb-10 underline decoration-4 decoration-gray-300 underline-offset-8">출 장 보 고 서</h1>
+
+              {/* [추가] 재기안 코멘트를 A4 보고서 내부 상단에 포함 */}
+              {selectedReport.resubmissionComment && (
+                <div className="mb-8 p-4 bg-blue-50 border-l-4 border-blue-500 text-blue-800 rounded-r text-sm">
+                   <h4 className="font-bold flex items-center gap-2 mb-1"><MessageSquare size={16}/> 재기안 수정 사유</h4>
+                   <p>{selectedReport.resubmissionComment}</p>
+                </div>
+              )}
+
               <div className="flex justify-end mb-8 text-center text-sm">
                 <table className="border-collapse border border-gray-400"><tbody><tr><td className="border bg-gray-100 p-1 w-20">담당</td><td className="border bg-gray-100 p-1 w-20">팀장</td><td className="border bg-gray-100 p-1 w-20">부서장</td></tr><tr><td className="border h-20 align-middle font-bold text-gray-400">{selectedReport.travelerName.slice(0,1)}인</td><td className="border h-20"></td><td className="border h-20 align-middle text-green-600 font-bold">{selectedReport.status === 'approved' ? '승인' : ''}</td></tr></tbody></table>
               </div>
