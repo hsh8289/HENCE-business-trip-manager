@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, MapPin, FileText, DollarSign, Car, Upload, Printer, Trash2, Plus, Save, Lock, LogOut, UserCog, RefreshCw, CheckCircle, Send, Edit3 } from 'lucide-react';
+import { Calendar, MapPin, FileText, DollarSign, Car, Upload, Printer, Trash2, Plus, Save, Lock, LogOut, UserCog, RefreshCw, CheckCircle, Send, Edit3, XCircle } from 'lucide-react';
 
 // 유류비 기준 단가 (원/km) - 회사 내규에 따라 수정 가능
 const FUEL_RATE_PERSONAL = 200; 
@@ -220,6 +220,7 @@ export default function App() {
   const [adminCredentials, setAdminCredentials] = useState(null);
   const [submittedReports, setSubmittedReports] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [editingId, setEditingId] = useState(null); // 수정 중인 보고서 ID
 
   // A4 출력 스타일
   const printStyles = `
@@ -311,25 +312,83 @@ export default function App() {
     }
   };
 
-  const handleSubmitReport = () => {
-    if (!formData.travelerName || !formData.startDate || !formData.endDate) { alert('필수 정보(출장자, 기간)를 모두 입력해주세요.'); return; }
-    if (window.confirm('보고서를 제출하시겠습니까? (제출 후 수정 불가)')) {
-      const newReport = { ...formData, id: Date.now(), submittedAt: new Date().toISOString() };
-      const updatedReports = [newReport, ...submittedReports];
+  // --- 관리자: 보고서 삭제 ---
+  const handleDeleteReport = () => {
+    if (selectedReport && window.confirm('정말로 이 보고서를 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.')) {
+      const updatedReports = submittedReports.filter(r => r.id !== selectedReport.id);
       setSubmittedReports(updatedReports);
       localStorage.setItem('submittedReports', JSON.stringify(updatedReports));
-      localStorage.removeItem('tripReportDraft');
-      alert('보고서가 성공적으로 제출되었습니다.');
+      alert('보고서가 삭제되었습니다.');
+      setSelectedReport(null);
+      setActiveTab('admin');
+    }
+  };
+
+  // --- 관리자: 수정 모드 진입 ---
+  const handleStartAdminEdit = () => {
+    if (selectedReport) {
+      setFormData({ ...selectedReport });
+      setEditingId(selectedReport.id);
+      setActiveTab('report'); // 폼 화면으로 이동
+      // 관리자 로그인 상태 유지됨
+    }
+  };
+
+  const handleSubmitReport = () => {
+    if (!formData.travelerName || !formData.startDate || !formData.endDate) { alert('필수 정보(출장자, 기간)를 모두 입력해주세요.'); return; }
+    
+    const isEditMode = !!editingId;
+    const confirmMessage = isEditMode ? '수정된 내용을 저장하시겠습니까?' : '보고서를 제출하시겠습니까? (제출 후 수정 불가)';
+
+    if (window.confirm(confirmMessage)) {
+      let updatedReports;
+      
+      if (isEditMode) {
+        // 기존 보고서 수정
+        updatedReports = submittedReports.map(r => 
+          r.id === editingId ? { ...formData, id: editingId, submittedAt: r.submittedAt } : r
+        );
+        alert('성공적으로 수정되었습니다.');
+      } else {
+        // 새 보고서 생성
+        const newReport = { ...formData, id: Date.now(), submittedAt: new Date().toISOString() };
+        updatedReports = [newReport, ...submittedReports];
+        alert('보고서가 성공적으로 제출되었습니다.');
+      }
+
+      setSubmittedReports(updatedReports);
+      localStorage.setItem('submittedReports', JSON.stringify(updatedReports));
+      
+      // 임시 저장 삭제 (새 제출일 경우만)
+      if (!isEditMode) localStorage.removeItem('tripReportDraft');
+      
+      // 폼 초기화
       setFormData({ startDate: '', endDate: '', travelerName: '', travelerCount: 1, location: '', purpose: '', content: '', vehicleType: 'company', distance: 0, fuelCost: 0, expenses: [{ id: 1, category: '식비', description: '점심 식사', amount: 0 }], receipts: [] });
-      setActiveTab('report');
+      setEditingId(null);
+
+      // 이동
+      if (isAdminLoggedIn) {
+        setActiveTab('admin');
+        setSelectedReport(null);
+      } else {
+        setActiveTab('report');
+      }
     }
   };
 
   const handleAdminLogin = (credentials) => { setIsAdminLoggedIn(true); setAdminCredentials(credentials); setActiveTab('admin'); };
-  const handleAdminLogout = () => { setIsAdminLoggedIn(false); setActiveTab('report'); setSelectedReport(null); };
+  
+  const handleAdminLogout = () => { 
+    setIsAdminLoggedIn(false); 
+    setActiveTab('report'); 
+    setSelectedReport(null); 
+    setEditingId(null);
+    setFormData({ startDate: '', endDate: '', travelerName: '', travelerCount: 1, location: '', purpose: '', content: '', vehicleType: 'company', distance: 0, fuelCost: 0, expenses: [{ id: 1, category: '식비', description: '점심 식사', amount: 0 }], receipts: [] });
+  };
+  
   const handleViewReport = (report) => { setSelectedReport(report); setActiveTab('preview'); };
   
-  // 미리보기 화면에서 '내용 수정' 클릭 시 (초기화 하지 않고 돌아가기)
+  // 미리보기 화면에서 '내용 수정' 클릭 시 (일반 사용자)
   const handleEditContent = () => {
     setActiveTab('report');
   };
@@ -340,15 +399,36 @@ export default function App() {
     <div className="bg-gray-100 min-h-screen p-4 md:p-8 print:bg-white print:p-0">
       <style>{printStyles}</style>
       <div className="max-w-[210mm] mx-auto mb-6 flex flex-col md:flex-row justify-between items-center gap-4 print-hidden">
-        {/* 미리보기 상단 메뉴 (관리자 모드일 때는 목록으로, 일반 사용자일 때는 버튼 없음) */}
-        {isAdminLoggedIn && selectedReport && (
+        {/* 관리자: 목록으로 가기 */}
+        {isAdminLoggedIn && selectedReport ? (
           <button onClick={() => { setSelectedReport(null); setActiveTab('admin'); }} className="text-gray-600 hover:text-gray-900 font-bold flex items-center gap-1">
             &larr; 목록으로
           </button>
+        ) : (
+          /* 일반 사용자: 수정하기 (화면 전환) */
+          <button onClick={() => setActiveTab('report')} className="text-gray-600 hover:text-gray-900 font-bold flex items-center gap-1">
+            &larr; 수정하기
+          </button>
         )}
         
-        {/* 인쇄 버튼은 항상 표시 (우측 정렬을 위해 div 유지) */}
         <div className="flex gap-2 w-full md:w-auto justify-end">
+          {/* 관리자 기능: 수정/삭제 버튼 추가 */}
+          {isAdminLoggedIn && selectedReport && (
+            <>
+              <button onClick={handleStartAdminEdit} className="flex-1 md:flex-none bg-blue-600 text-white px-4 py-2.5 rounded-lg shadow-md hover:bg-blue-700 transition flex justify-center items-center gap-2 font-bold">
+                <Edit3 size={18} /> 내용 수정
+              </button>
+              <button onClick={handleDeleteReport} className="flex-1 md:flex-none bg-red-500 text-white px-4 py-2.5 rounded-lg shadow-md hover:bg-red-600 transition flex justify-center items-center gap-2 font-bold">
+                <Trash2 size={18} /> 보고서 삭제
+              </button>
+            </>
+          )}
+
+          {!isAdminLoggedIn && !selectedReport && (
+            <button onClick={handleSubmitReport} className="flex-1 md:flex-none bg-blue-600 text-white px-6 py-2.5 rounded-lg shadow-md hover:bg-blue-700 transition flex justify-center items-center gap-2 font-bold">
+              <CheckCircle size={18} /> 제출하기
+            </button>
+          )}
           <button onClick={handlePrint} className="flex-1 md:flex-none bg-gray-800 text-white px-6 py-2.5 rounded-lg shadow-md hover:bg-gray-900 transition flex justify-center items-center gap-2 font-bold">
             <Printer size={18} /> 인쇄 / PDF
           </button>
@@ -453,22 +533,38 @@ export default function App() {
       <header className="bg-gradient-to-r from-blue-700 to-blue-600 text-white shadow-lg print-hidden sticky top-0 z-20">
         <div className="w-full max-w-[1920px] mx-auto px-4 md:px-8 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
           <h1 className="text-lg md:text-xl font-bold flex items-center gap-2 cursor-pointer hover:opacity-90 transition" onClick={() => !isAdminLoggedIn && setActiveTab('report')}>
-            <FileText size={24} /> HENCE 출장 보고 및 비용 정산
+            <img src="https://i.imgur.com/Qc6M0kM.png" alt="HENCE 로고" className="h-8 mb-1" />
           </h1>
           <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
             
-            {/* --- 일반 사용자 모드 버튼 --- */}
-            {!isAdminLoggedIn && activeTab === 'report' && (
+            {/* --- 일반 사용자 / 관리자 수정 모드 헤더 버튼 --- */}
+            {activeTab === 'report' && (
               <>
-                <button onClick={handleResetForm} className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-blue-800 hover:bg-blue-900 rounded-lg text-sm transition text-blue-100">
-                  <RefreshCw size={14} /> 초기화
-                </button>
+                {/* 초기화 버튼: 관리자 수정 모드에서는 숨김 권장하지만, 원하시면 표시 가능 (여기선 일반 사용자에게만 노출) */}
+                {!editingId && (
+                  <button onClick={handleResetForm} className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-blue-800 hover:bg-blue-900 rounded-lg text-sm transition text-blue-100">
+                    <RefreshCw size={14} /> 초기화
+                  </button>
+                )}
+                
+                {/* 제출/수정 버튼 */}
                 <button onClick={handleSubmitReport} className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-400 rounded-lg text-sm transition shadow-sm font-bold">
-                  <Send size={16} /> 제출하기
+                  {editingId ? <><CheckCircle size={16} /> 수정 완료</> : <><Send size={16} /> 제출하기</>}
                 </button>
-                <button onClick={() => setIsAdminLoginModalOpen(true)} className="flex-shrink-0 px-4 py-1.5 rounded-lg font-bold text-sm transition bg-blue-900 text-white hover:bg-black flex items-center gap-1 shadow-sm">
-                  <Lock size={14} /> 관리자
-                </button>
+
+                {/* 일반 사용자 모드일 때만 관리자 로그인 버튼 표시 */}
+                {!isAdminLoggedIn && (
+                  <button onClick={() => setIsAdminLoginModalOpen(true)} className="flex-shrink-0 px-4 py-1.5 rounded-lg font-bold text-sm transition bg-blue-900 text-white hover:bg-black flex items-center gap-1 shadow-sm">
+                    <Lock size={14} /> 관리자
+                  </button>
+                )}
+
+                {/* 관리자 수정 모드일 때 취소 버튼 */}
+                {isAdminLoggedIn && editingId && (
+                  <button onClick={() => { setEditingId(null); setActiveTab('admin'); }} className="flex-shrink-0 px-4 py-1.5 rounded-lg font-bold text-sm transition bg-gray-600 hover:bg-gray-700 flex items-center gap-1 shadow-sm">
+                    <XCircle size={14} /> 취소
+                  </button>
+                )}
               </>
             )}
 
@@ -484,8 +580,8 @@ export default function App() {
               </>
             )}
 
-            {/* --- 관리자 모드 버튼 --- */}
-            {isAdminLoggedIn && (
+            {/* --- 관리자 모드 버튼 (대시보드 보기) --- */}
+            {isAdminLoggedIn && activeTab !== 'report' && (
               <button onClick={() => { setActiveTab('admin'); setSelectedReport(null); }} className={`flex-shrink-0 px-4 py-1.5 rounded-lg font-medium transition flex items-center gap-1 ${activeTab === 'admin' ? 'bg-white text-blue-700' : 'bg-blue-800 text-white'}`}>
                 <UserCog size={18} /> 관리자 모드
               </button>
@@ -495,7 +591,8 @@ export default function App() {
       </header>
 
       <main className="w-full max-w-[1920px] mx-auto p-4 md:p-8 print:p-0">
-        {activeTab === 'report' && !isAdminLoggedIn && (
+        {/* 작성 폼: 일반 사용자 작성 모드 OR 관리자 수정 모드일 때 표시 */}
+        {activeTab === 'report' && (
           <div className="animate-fade-in print-hidden">
             {/* 3단 레이아웃 그리드 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
@@ -647,7 +744,7 @@ export default function App() {
               {/* 작성 완료 버튼 */}
               <div className="col-span-1 lg:col-span-2 xl:col-span-3 flex justify-center py-6">
                 <button onClick={() => { setActiveTab('preview'); setSelectedReport(formData); }} className="w-full md:w-1/3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-xl font-bold text-xl hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                  <CheckCircle size={24} /> 작성 완료 및 미리보기
+                  <CheckCircle size={24} /> {editingId ? '수정 완료 및 미리보기' : '작성 완료 및 미리보기'}
                 </button>
               </div>
 
