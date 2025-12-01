@@ -407,7 +407,8 @@ export default function App() {
         <div className="w-full max-w-[1920px] mx-auto px-4 md:px-8 py-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <h1 className="text-lg md:text-xl font-bold flex items-center gap-2 cursor-pointer hover:opacity-90 transition" onClick={() => setView('dashboard')}>
-              <img src="https://i.imgur.com/Qc6M0kM.png" alt="HENCE 로고" className="h-8 mb-1" />
+              {/* [중요] 상단 제목은 텍스트+아이콘으로 유지. 변경 금지. */}
+              <FileText size={24} /> HENCE 출장 보고 및 비용 정산
             </h1>
             <span className="text-sm bg-blue-800 px-3 py-1 rounded-full">{user.role === 'admin' ? '관리자 모드' : `${user.name} 님`}</span>
           </div>
