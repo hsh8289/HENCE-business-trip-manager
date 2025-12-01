@@ -21,9 +21,9 @@ function AdminLoginModal({ onClose, onLogin }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white p-8 rounded-lg shadow-xl w-96 animate-fade-in">
-        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-blue-600">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+      <div className="bg-white p-6 md:p-8 rounded-lg shadow-xl w-full max-w-sm md:w-96 animate-fade-in">
+        <h2 className="text-xl md:text-2xl font-bold mb-6 flex items-center gap-2 text-blue-600">
           <Lock size={24} /> 관리자 로그인
         </h2>
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
@@ -63,16 +63,16 @@ function AdminLoginModal({ onClose, onLogin }) {
 
 function AdminDashboard({ reports, onViewReport, onChangePassword, onLogout }) {
   return (
-    <div className="p-6 animate-fade-in max-w-6xl mx-auto">
+    <div className="p-4 md:p-6 animate-fade-in w-full max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <h2 className="text-2xl font-bold flex items-center gap-2 text-gray-800">
           <UserCog size={28} className="text-blue-600" /> 관리자 대시보드
         </h2>
-        <div className="flex gap-2">
-          <button onClick={onChangePassword} className="flex items-center gap-1 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded shadow-sm text-sm transition font-medium">
+        <div className="flex gap-2 w-full md:w-auto">
+          <button onClick={onChangePassword} className="flex-1 md:flex-none flex items-center justify-center gap-1 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded shadow-sm text-sm transition font-medium">
             <UserCog size={16} /> 비밀번호 변경
           </button>
-          <button onClick={onLogout} className="flex items-center gap-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded shadow-sm text-sm transition font-bold">
+          <button onClick={onLogout} className="flex-1 md:flex-none flex items-center justify-center gap-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded shadow-sm text-sm transition font-bold">
             <LogOut size={16} /> 로그아웃
           </button>
         </div>
@@ -86,7 +86,7 @@ function AdminDashboard({ reports, onViewReport, onChangePassword, onLogout }) {
           <span className="text-sm text-gray-500">총 {reports.length}건</span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left text-gray-600">
+          <table className="w-full text-sm text-left text-gray-600 min-w-[600px]">
             <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b">
               <tr>
                 <th scope="col" className="px-6 py-3 font-bold">제출일</th>
@@ -102,7 +102,7 @@ function AdminDashboard({ reports, onViewReport, onChangePassword, onLogout }) {
                   <tr key={report.id} className="bg-white hover:bg-blue-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">{new Date(report.submittedAt).toLocaleDateString()}</td>
                     <td className="px-6 py-4 font-bold text-gray-900">{report.travelerName}</td>
-                    <td className="px-6 py-4">{report.location}</td>
+                    <td className="px-6 py-4 truncate max-w-[150px]">{report.location}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{report.startDate} ~ {report.endDate}</td>
                     <td className="px-6 py-4 text-center">
                       <button 
@@ -161,8 +161,8 @@ function PasswordChangeModal({ onClose, adminCredentials }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white p-8 rounded-lg shadow-xl w-96 animate-fade-in">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+      <div className="bg-white p-6 md:p-8 rounded-lg shadow-xl w-full max-w-sm md:w-96 animate-fade-in">
         <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-blue-600">
           <UserCog size={24} /> 비밀번호 변경
         </h2>
@@ -255,6 +255,15 @@ export default function App() {
       background: white;
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       border: 1px solid #e5e7eb;
+    }
+
+    /* 모바일 미리보기 스타일 조정 */
+    @media (max-width: 768px) {
+      .a4-preview-container {
+        width: 100%;
+        padding: 15px;
+        min-height: auto;
+      }
     }
   `;
 
@@ -423,11 +432,11 @@ export default function App() {
 
   // --- 프리뷰 렌더링 ---
   const renderPreview = (data) => (
-    <div className="bg-gray-100 min-h-screen p-8 print:bg-white print:p-0">
+    <div className="bg-gray-100 min-h-screen p-4 md:p-8 print:bg-white print:p-0">
       <style>{printStyles}</style> {/* 동적 스타일 주입 */}
       
       {/* 상단 툴바 (인쇄 시 숨김) */}
-      <div className="max-w-[210mm] mx-auto mb-6 flex justify-between items-center print-hidden">
+      <div className="max-w-[210mm] mx-auto mb-6 flex flex-col md:flex-row justify-between items-center gap-4 print-hidden">
         {isAdminLoggedIn && selectedReport ? (
           <button onClick={() => { setSelectedReport(null); setActiveTab('admin'); }} className="text-gray-600 hover:text-gray-900 font-bold flex items-center gap-1">
             &larr; 목록으로
@@ -438,13 +447,13 @@ export default function App() {
           </button>
         )}
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full md:w-auto">
           {!isAdminLoggedIn && !selectedReport && (
-            <button onClick={handleSubmitReport} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition flex items-center gap-2 font-bold">
+            <button onClick={handleSubmitReport} className="flex-1 md:flex-none bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition flex justify-center items-center gap-2 font-bold">
               <FileText size={18} /> 제출하기
             </button>
           )}
-          <button onClick={handlePrint} className="bg-gray-800 text-white px-4 py-2 rounded shadow hover:bg-gray-900 transition flex items-center gap-2 font-bold">
+          <button onClick={handlePrint} className="flex-1 md:flex-none bg-gray-800 text-white px-4 py-2 rounded shadow hover:bg-gray-900 transition flex justify-center items-center gap-2 font-bold">
             <Printer size={18} /> 인쇄 / PDF 저장
           </button>
         </div>
@@ -452,7 +461,7 @@ export default function App() {
 
       {/* A4 실제 문서 영역 */}
       <div className="a4-preview-container print-container">
-        <h1 className="text-3xl font-bold text-center mb-10 underline decoration-4 decoration-gray-300 underline-offset-8">출 장 보 고 서</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-center mb-10 underline decoration-4 decoration-gray-300 underline-offset-8">출 장 보 고 서</h1>
         
         <div className="flex justify-end mb-8 text-center text-sm">
           <table className="border-collapse border border-gray-400">
@@ -471,24 +480,26 @@ export default function App() {
           </table>
         </div>
 
-        <table className="w-full border-collapse border border-gray-400 mb-6 text-sm">
-          <tbody>
-            <tr>
-              <td className="border border-gray-400 bg-gray-100 p-2 font-bold w-1/5">출장 기간</td>
-              <td className="border border-gray-400 p-2 w-2/5">{data.startDate} ~ {data.endDate}</td>
-              <td className="border border-gray-400 bg-gray-100 p-2 font-bold w-1/5">출장자</td>
-              <td className="border border-gray-400 p-2 w-1/5">{data.travelerName} 외 {data.travelerCount - 1}명</td>
-            </tr>
-            <tr>
-              <td className="border border-gray-400 bg-gray-100 p-2 font-bold">출장 장소</td>
-              <td className="border border-gray-400 p-2" colSpan="3">{data.location}</td>
-            </tr>
-            <tr>
-              <td className="border border-gray-400 bg-gray-100 p-2 font-bold">출장 목적</td>
-              <td className="border border-gray-400 p-2" colSpan="3">{data.purpose}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse border border-gray-400 mb-6 text-sm min-w-[300px]">
+            <tbody>
+              <tr>
+                <td className="border border-gray-400 bg-gray-100 p-2 font-bold w-1/5 whitespace-nowrap">출장 기간</td>
+                <td className="border border-gray-400 p-2 w-2/5">{data.startDate} ~ {data.endDate}</td>
+                <td className="border border-gray-400 bg-gray-100 p-2 font-bold w-1/5 whitespace-nowrap">출장자</td>
+                <td className="border border-gray-400 p-2 w-1/5">{data.travelerName} 외 {data.travelerCount - 1}명</td>
+              </tr>
+              <tr>
+                <td className="border border-gray-400 bg-gray-100 p-2 font-bold">출장 장소</td>
+                <td className="border border-gray-400 p-2" colSpan="3">{data.location}</td>
+              </tr>
+              <tr>
+                <td className="border border-gray-400 bg-gray-100 p-2 font-bold">출장 목적</td>
+                <td className="border border-gray-400 p-2" colSpan="3">{data.purpose}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         <div className="mb-6">
           <h3 className="font-bold mb-2 text-sm border-l-4 border-gray-600 pl-2">상세 보고 내용</h3>
@@ -499,45 +510,47 @@ export default function App() {
 
         <div className="mb-6">
           <h3 className="font-bold mb-2 text-sm border-l-4 border-gray-600 pl-2">경비 정산 내역</h3>
-          <table className="w-full border-collapse border border-gray-400 text-sm text-center">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border border-gray-400 p-2">구분</th>
-                <th className="border border-gray-400 p-2">내역</th>
-                <th className="border border-gray-400 p-2">금액</th>
-                <th className="border border-gray-400 p-2">비고</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="border border-gray-400 p-2">교통/유류비</td>
-                <td className="border border-gray-400 p-2 text-left">
-                  {data.vehicleType === 'personal' ? `개인차량 (${data.distance}km * ${FUEL_RATE_PERSONAL}원)` : `법인차량 (${data.distance}km)`}
-                </td>
-                <td className="border border-gray-400 p-2 text-right">{formatCurrency(data.fuelCost)}</td>
-                <td className="border border-gray-400 p-2 text-gray-500">{data.vehicleType === 'personal' ? '' : '법인카드'}</td>
-              </tr>
-              {data.expenses.map((expense) => (
-                <tr key={expense.id}>
-                  <td className="border border-gray-400 p-2">{expense.category}</td>
-                  <td className="border border-gray-400 p-2 text-left">{expense.description}</td>
-                  <td className="border border-gray-400 p-2 text-right">{formatCurrency(expense.amount)}</td>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse border border-gray-400 text-sm text-center min-w-[300px]">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-400 p-2 whitespace-nowrap">구분</th>
+                  <th className="border border-gray-400 p-2">내역</th>
+                  <th className="border border-gray-400 p-2 whitespace-nowrap">금액</th>
+                  <th className="border border-gray-400 p-2">비고</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="border border-gray-400 p-2 whitespace-nowrap">교통/유류비</td>
+                  <td className="border border-gray-400 p-2 text-left">
+                    {data.vehicleType === 'personal' ? `개인차량 (${data.distance}km * ${FUEL_RATE_PERSONAL}원)` : `법인차량 (${data.distance}km)`}
+                  </td>
+                  <td className="border border-gray-400 p-2 text-right">{formatCurrency(data.fuelCost)}</td>
+                  <td className="border border-gray-400 p-2 text-gray-500">{data.vehicleType === 'personal' ? '' : '법인카드'}</td>
+                </tr>
+                {data.expenses.map((expense) => (
+                  <tr key={expense.id}>
+                    <td className="border border-gray-400 p-2 whitespace-nowrap">{expense.category}</td>
+                    <td className="border border-gray-400 p-2 text-left">{expense.description}</td>
+                    <td className="border border-gray-400 p-2 text-right">{formatCurrency(expense.amount)}</td>
+                    <td className="border border-gray-400 p-2"></td>
+                  </tr>
+                ))}
+                <tr className="bg-gray-50 font-bold">
+                  <td className="border border-gray-400 p-2" colSpan="2">합 계</td>
+                  <td className="border border-gray-400 p-2 text-right text-blue-600">{formatCurrency(calculateTotal(data))}</td>
                   <td className="border border-gray-400 p-2"></td>
                 </tr>
-              ))}
-              <tr className="bg-gray-50 font-bold">
-                <td className="border border-gray-400 p-2" colSpan="2">합 계</td>
-                <td className="border border-gray-400 p-2 text-right text-blue-600">{formatCurrency(calculateTotal(data))}</td>
-                <td className="border border-gray-400 p-2"></td>
-              </tr>
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {data.receipts.length > 0 && (
           <div className="break-inside-avoid">
             <h3 className="font-bold mb-2 text-sm border-l-4 border-gray-600 pl-2">증빙 자료</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {data.receipts.map(receipt => (
                 <div key={receipt.id} className="border border-gray-300 p-2 break-inside-avoid">
                   <img src={receipt.url} alt="증빙" className="max-w-full max-h-60 mx-auto object-contain" />
@@ -559,27 +572,27 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans print:bg-white">
-      {/* 헤더 */}
-      <header className="bg-blue-600 text-white p-4 shadow-md print-hidden">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold flex items-center gap-2 cursor-pointer" onClick={() => !isAdminLoggedIn && setActiveTab('report')}>
+      {/* 헤더 (전체 너비 적용) */}
+      <header className="bg-blue-600 text-white p-4 shadow-md print-hidden sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3 md:gap-0">
+          <h1 className="text-lg md:text-xl font-bold flex items-center gap-2 cursor-pointer whitespace-nowrap" onClick={() => !isAdminLoggedIn && setActiveTab('report')}>
             <FileText size={24} /> HENCE 출장 보고 및 비용 정산
           </h1>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
             {!isAdminLoggedIn ? (
               <>
-                <button onClick={handleSaveDraft} className="flex items-center gap-1 px-3 py-1 bg-blue-500 hover:bg-blue-400 rounded text-sm transition">
+                <button onClick={handleSaveDraft} className="flex-shrink-0 flex items-center gap-1 px-3 py-1 bg-blue-500 hover:bg-blue-400 rounded text-sm transition">
                   <Save size={16} /> 임시저장
                 </button>
-                <button onClick={() => { setActiveTab('report'); setSelectedReport(null); }} className={`px-4 py-2 rounded font-medium transition ${activeTab === 'report' ? 'bg-white text-blue-600' : 'bg-blue-700 text-white'}`}>
+                <button onClick={() => { setActiveTab('report'); setSelectedReport(null); }} className={`flex-shrink-0 px-4 py-2 rounded font-medium transition ${activeTab === 'report' ? 'bg-white text-blue-600' : 'bg-blue-700 text-white'}`}>
                   작성하기
                 </button>
-                <button onClick={() => setIsAdminLoginModalOpen(true)} className="px-4 py-2 rounded font-medium transition bg-blue-800 text-white hover:bg-blue-900 flex items-center gap-1 shadow-sm">
+                <button onClick={() => setIsAdminLoginModalOpen(true)} className="flex-shrink-0 px-4 py-2 rounded font-medium transition bg-blue-800 text-white hover:bg-blue-900 flex items-center gap-1 shadow-sm">
                   <Lock size={16} /> 관리자
                 </button>
               </>
             ) : (
-              <button onClick={() => { setActiveTab('admin'); setSelectedReport(null); }} className={`px-4 py-2 rounded font-medium transition flex items-center gap-1 ${activeTab === 'admin' ? 'bg-white text-blue-600' : 'bg-blue-700 text-white'}`}>
+              <button onClick={() => { setActiveTab('admin'); setSelectedReport(null); }} className={`flex-shrink-0 px-4 py-2 rounded font-medium transition flex items-center gap-1 ${activeTab === 'admin' ? 'bg-white text-blue-600' : 'bg-blue-700 text-white'}`}>
                 <UserCog size={18} /> 관리자 모드
               </button>
             )}
@@ -587,171 +600,183 @@ export default function App() {
         </div>
       </header>
 
-      {/* 메인 콘텐츠 */}
-      <main className="max-w-6xl mx-auto p-6 print:p-0 print:max-w-none print:mx-0">
+      {/* 메인 콘텐츠 (최대 너비 7xl로 확장하여 16:9 비율 느낌 제공) */}
+      <main className="max-w-7xl mx-auto p-4 md:p-8 print:p-0 print:max-w-none print:mx-0">
         
-        {/* 1. 작성 폼 */}
+        {/* 1. 작성 폼 (그리드 레이아웃 적용) */}
         {activeTab === 'report' && !isAdminLoggedIn && (
-          <div className="space-y-6 animate-fade-in print-hidden max-w-4xl mx-auto">
-            {/* 기본 정보 */}
-            <section className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 border-b pb-2">
-                <Calendar className="text-blue-600" size={20} /> 출장 기본 정보
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">시작일</label>
-                  <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">종료일</label>
-                  <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">출장자 성명</label>
-                  <input type="text" name="travelerName" placeholder="홍길동" value={formData.travelerName} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">출장 인원 (명)</label>
-                  <input type="number" name="travelerCount" min="1" value={formData.travelerCount} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-              </div>
-            </section>
-
-            {/* 장소 및 내용 */}
-            <section className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 border-b pb-2">
-                <MapPin className="text-blue-600" size={20} /> 장소 및 내용
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">출장 장소</label>
-                  <input type="text" name="location" placeholder="서울시 강남구 삼성동 거래처 본사" value={formData.location} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">출장 목적</label>
-                  <input type="text" name="purpose" placeholder="신규 프로젝트 킥오프 미팅" value={formData.purpose} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">상세 보고 내용</label>
-                  <textarea name="content" rows="5" placeholder="주요 협의 내용 및 결과 요약..." value={formData.content} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none resize-none"></textarea>
-                </div>
-              </div>
-            </section>
-
-            {/* 교통 및 유류비 */}
-            <section className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 border-b pb-2">
-                <Car className="text-blue-600" size={20} /> 교통수단 및 유류비 정산
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">차량 구분</label>
-                  <select name="vehicleType" value={formData.vehicleType} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="company">법인 차량 (유류비 미지급)</option>
-                    <option value="personal">개인 차량 (유류비 지급)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">운행 거리 (km)</label>
-                  <input type="number" name="distance" placeholder="0" value={formData.distance} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-right" />
-                </div>
-              </div>
+          <div className="animate-fade-in print-hidden">
+            {/* 데스크톱에서는 2열 그리드, 모바일에서는 1열 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               
-              <div className="mt-4 p-4 bg-gray-50 rounded flex justify-between items-center">
-                <span className="text-sm text-gray-600">
-                  * 개인 차량 기준: {FUEL_RATE_PERSONAL}원/km 적용
-                </span>
-                <span className="text-lg font-bold text-blue-600">
-                  유류비 산출: {formatCurrency(formData.fuelCost)}
-                </span>
-              </div>
-            </section>
-
-            {/* 경비 내역 */}
-            <section className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 border-b pb-2">
-                <DollarSign className="text-blue-600" size={20} /> 지출 경비 내역
-              </h2>
-              
-              <div className="space-y-3 mb-4">
-                {formData.expenses.map((expense) => (
-                  <div key={expense.id} className="flex flex-col md:flex-row gap-2 items-start md:items-center bg-gray-50 p-3 rounded">
-                    <select 
-                      value={expense.category}
-                      onChange={(e) => handleExpenseChange(expense.id, 'category', e.target.value)}
-                      className="p-2 border rounded w-full md:w-32"
-                    >
-                      <option>식비</option>
-                      <option>숙박비</option>
-                      <option>통행료</option>
-                      <option>접대비</option>
-                      <option>기타</option>
-                    </select>
-                    <input 
-                      type="text" 
-                      placeholder="내용 (예: 점심식사)" 
-                      value={expense.description}
-                      onChange={(e) => handleExpenseChange(expense.id, 'description', e.target.value)}
-                      className="p-2 border rounded flex-grow w-full"
-                    />
-                    <input 
-                      type="number" 
-                      placeholder="금액" 
-                      value={expense.amount}
-                      onChange={(e) => handleExpenseChange(expense.id, 'amount', e.target.value)}
-                      className="p-2 border rounded w-full md:w-40 text-right"
-                    />
-                    <button onClick={() => removeExpense(expense.id)} className="p-2 text-red-500 hover:bg-red-100 rounded">
-                      <Trash2 size={18} />
-                    </button>
+              {/* 왼쪽 컬럼: 기본정보 & 장소 */}
+              <div className="space-y-6">
+                {/* 기본 정보 */}
+                <section className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 h-full">
+                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 border-b pb-2">
+                    <Calendar className="text-blue-600" size={20} /> 출장 기본 정보
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">시작일</label>
+                      <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">종료일</label>
+                      <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">출장자 성명</label>
+                      <input type="text" name="travelerName" placeholder="홍길동" value={formData.travelerName} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">출장 인원 (명)</label>
+                      <input type="number" name="travelerCount" min="1" value={formData.travelerCount} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
                   </div>
-                ))}
-              </div>
-              
-              <button onClick={addExpense} className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800">
-                <Plus size={16} /> 항목 추가하기
-              </button>
+                </section>
 
-              <div className="mt-6 text-right border-t pt-4">
-                <p className="text-gray-600">유류비 포함 총 청구 금액</p>
-                <p className="text-3xl font-bold text-gray-900">{formatCurrency(calculateTotal())}</p>
-              </div>
-            </section>
-
-             {/* 증빙 자료 */}
-             <section className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 border-b pb-2">
-                <Upload className="text-blue-600" size={20} /> 증빙 자료 (영수증)
-              </h2>
-              <div className="flex items-center gap-4 mb-4">
-                <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded flex items-center gap-2 transition">
-                  <Upload size={18} /> 사진 업로드
-                  <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-                </label>
-                <span className="text-sm text-gray-500">이미지 파일(JPG, PNG)만 가능</span>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {formData.receipts.map(receipt => (
-                  <div key={receipt.id} className="relative group border rounded-lg overflow-hidden">
-                    <img src={receipt.url} alt="Receipt" className="w-full h-32 object-cover" />
-                    <button 
-                      onClick={() => removeReceipt(receipt.id)}
-                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                    <p className="text-xs p-1 bg-gray-50 truncate">{receipt.name}</p>
+                {/* 장소 및 내용 */}
+                <section className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 h-full">
+                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 border-b pb-2">
+                    <MapPin className="text-blue-600" size={20} /> 장소 및 내용
+                  </h2>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">출장 장소</label>
+                      <input type="text" name="location" placeholder="서울시 강남구 삼성동 거래처 본사" value={formData.location} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">출장 목적</label>
+                      <input type="text" name="purpose" placeholder="신규 프로젝트 킥오프 미팅" value={formData.purpose} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">상세 보고 내용</label>
+                      <textarea name="content" rows="5" placeholder="주요 협의 내용 및 결과 요약..." value={formData.content} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none resize-none"></textarea>
+                    </div>
                   </div>
-                ))}
+                </section>
               </div>
-            </section>
 
-            <div className="flex justify-center pt-6">
-              <button onClick={() => { setActiveTab('preview'); setSelectedReport(formData); }} className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold text-lg hover:bg-blue-700 shadow-lg transition">
-                작성 완료 및 미리보기
-              </button>
+              {/* 오른쪽 컬럼: 교통 & 경비 */}
+              <div className="space-y-6">
+                {/* 교통 및 유류비 */}
+                <section className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 border-b pb-2">
+                    <Car className="text-blue-600" size={20} /> 교통수단 및 유류비 정산
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">차량 구분</label>
+                      <select name="vehicleType" value={formData.vehicleType} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="company">법인 차량 (유류비 미지급)</option>
+                        <option value="personal">개인 차량 (유류비 지급)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">운행 거리 (km)</label>
+                      <input type="number" name="distance" placeholder="0" value={formData.distance} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-right" />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 p-4 bg-gray-50 rounded flex justify-between items-center">
+                    <span className="text-sm text-gray-600">
+                      * 개인차량: {FUEL_RATE_PERSONAL}원/km
+                    </span>
+                    <span className="text-lg font-bold text-blue-600 whitespace-nowrap">
+                      유류비: {formatCurrency(formData.fuelCost)}
+                    </span>
+                  </div>
+                </section>
+
+                {/* 경비 내역 */}
+                <section className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 border-b pb-2">
+                    <DollarSign className="text-blue-600" size={20} /> 지출 경비 내역
+                  </h2>
+                  
+                  <div className="space-y-3 mb-4">
+                    {formData.expenses.map((expense) => (
+                      <div key={expense.id} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center bg-gray-50 p-3 rounded">
+                        <select 
+                          value={expense.category}
+                          onChange={(e) => handleExpenseChange(expense.id, 'category', e.target.value)}
+                          className="p-2 border rounded w-full sm:w-24 md:w-32"
+                        >
+                          <option>식비</option>
+                          <option>숙박비</option>
+                          <option>통행료</option>
+                          <option>접대비</option>
+                          <option>기타</option>
+                        </select>
+                        <input 
+                          type="text" 
+                          placeholder="내용" 
+                          value={expense.description}
+                          onChange={(e) => handleExpenseChange(expense.id, 'description', e.target.value)}
+                          className="p-2 border rounded flex-grow w-full"
+                        />
+                        <div className="flex w-full sm:w-auto gap-2">
+                          <input 
+                            type="number" 
+                            placeholder="금액" 
+                            value={expense.amount}
+                            onChange={(e) => handleExpenseChange(expense.id, 'amount', e.target.value)}
+                            className="p-2 border rounded w-full sm:w-32 text-right"
+                          />
+                          <button onClick={() => removeExpense(expense.id)} className="p-2 text-red-500 hover:bg-red-100 rounded">
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <button onClick={addExpense} className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800">
+                    <Plus size={16} /> 항목 추가하기
+                  </button>
+
+                  <div className="mt-6 text-right border-t pt-4">
+                    <p className="text-gray-600">유류비 포함 총 청구 금액</p>
+                    <p className="text-2xl md:text-3xl font-bold text-gray-900">{formatCurrency(calculateTotal())}</p>
+                  </div>
+                </section>
+              </div>
+
+              {/* 하단: 증빙 자료 (전체 너비 사용) */}
+              <section className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 lg:col-span-2">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 border-b pb-2">
+                  <Upload className="text-blue-600" size={20} /> 증빙 자료 (영수증)
+                </h2>
+                <div className="flex items-center gap-4 mb-4">
+                  <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded flex items-center gap-2 transition w-full sm:w-auto justify-center">
+                    <Upload size={18} /> 사진 업로드
+                    <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                  </label>
+                  <span className="text-sm text-gray-500 hidden sm:inline">이미지 파일(JPG, PNG)만 가능</span>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {formData.receipts.map(receipt => (
+                    <div key={receipt.id} className="relative group border rounded-lg overflow-hidden">
+                      <img src={receipt.url} alt="Receipt" className="w-full h-32 object-cover" />
+                      <button 
+                        onClick={() => removeReceipt(receipt.id)}
+                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                      <p className="text-xs p-1 bg-gray-50 truncate">{receipt.name}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <div className="flex justify-center pt-6 lg:col-span-2">
+                <button onClick={() => { setActiveTab('preview'); setSelectedReport(formData); }} className="w-full md:w-auto bg-blue-600 text-white px-8 py-3 rounded-lg font-bold text-lg hover:bg-blue-700 shadow-lg transition">
+                  작성 완료 및 미리보기
+                </button>
+              </div>
             </div>
           </div>
         )}
