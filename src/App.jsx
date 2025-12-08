@@ -6,7 +6,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, query, where } from "firebase/firestore";
 
 // ----------------------------------------------------------------------
-// [설정] Firebase 설정값 (Firebase 콘솔에서 복사해서 채워넣으세요)
+// [설정] Firebase 설정값 (사용자 제공 값 적용됨)
 // ----------------------------------------------------------------------
 const firebaseConfig = {
   apiKey: "AIzaSyCP2qHGu2S8TP2_8ruIrLoZv_k08fO5EQY",
@@ -397,22 +397,24 @@ export default function App() {
       alert("데이터베이스 연결 오류");
       return;
     }
+    setLoading(true); // 저장 시작 시 로딩 표시
     try {
       if (isEdit) {
         // 수정: 기존 문서 업데이트
         const reportRef = doc(db, "reports", reportData.id);
-        await setDoc(reportRef, reportData); // setDoc은 덮어쓰기 (merge 옵션 없이 전체 교체)
+        await setDoc(reportRef, reportData); 
       } else {
-        // 신규: addDoc은 ID 자동 생성. 우리는 ID를 관리하므로 setDoc 사용하거나 addDoc 후 ID 주입
-        // 여기서는 편의상 timestamp를 ID 문자열로 사용하여 문서 생성
+        // 신규: ID 생성 후 저장
         const newId = String(Date.now());
         const reportWithId = { ...reportData, id: newId };
         await setDoc(doc(db, "reports", newId), reportWithId);
       }
-      fetchReports(); // 목록 갱신
+      await fetchReports(); // 목록 갱신 대기
     } catch (e) {
       console.error("저장 실패", e);
       alert("저장 중 오류가 발생했습니다.");
+    } finally {
+      setLoading(false); // 저장 완료 후 로딩 해제
     }
   };
 
@@ -477,7 +479,6 @@ export default function App() {
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // 주의: Firestore 용량 제한(1MB) 때문에 큰 이미지는 에러날 수 있음. 실무에선 Storage 사용 필수.
       if (file.size > 1000000) {
         alert("이미지 용량이 너무 큽니다. (1MB 이하 권장)");
         return;
@@ -551,6 +552,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans print:bg-white flex flex-col items-center">
+      {/* 로딩 표시 (배포 실패 방지용) */}
+      {loading && (
+        <div className="fixed inset-0 bg-white bg-opacity-80 flex justify-center items-center z-[100]">
+          <Loader className="animate-spin text-blue-600" size={48} />
+        </div>
+      )}
+
       <header className="bg-gradient-to-r from-blue-700 to-blue-600 text-white shadow-lg print-hidden sticky top-0 z-20 w-full">
         <div className="w-full max-w-[1920px] mx-auto px-4 md:px-8 py-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
