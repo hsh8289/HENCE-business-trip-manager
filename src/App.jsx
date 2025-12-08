@@ -1,5 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, MapPin, FileText, DollarSign, Car, Upload, Printer, Trash2, Plus, Save, Lock, LogOut, UserCog, RefreshCw, Check, Send, Edit, X, Users, AlertCircle, MessageSquare, LogIn, Briefcase, Shield, Search, Filter } from 'lucide-react';
+import { Calendar, MapPin, FileText, DollarSign, Car, Upload, Printer, Trash2, Plus, Save, Lock, LogOut, UserCog, RefreshCw, Check, Send, Edit, X, Users, AlertCircle, MessageSquare, LogIn, Briefcase, Shield, Search, Filter, Loader } from 'lucide-react';
+
+// --- [중요] Firebase 라이브러리 임포트 ---
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, query, where } from "firebase/firestore";
+
+// ----------------------------------------------------------------------
+// [설정] Firebase 설정값 (Firebase 콘솔에서 복사해서 채워넣으세요)
+// ----------------------------------------------------------------------
+const firebaseConfig = {
+  apiKey: "AIzaSyCP2qHGu2S8TP2_8ruIrLoZv_k08fO5EQY",
+  authDomain: "hence-1e6de.firebaseapp.com",
+  projectId: "hence-1e6de",
+  storageBucket: "hence-1e6de.firebasestorage.app",
+  messagingSenderId: "1048200292822",
+  appId: "1:1048200292822:web:36d1dbe23291db89b35c77",
+  measurementId: "G-F2BGRRR93B"
+};
+
+// Firebase 초기화 (설정값이 있을 때만 실행)
+let db;
+try {
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+} catch (error) {
+  console.error("Firebase 설정이 올바르지 않습니다. firebaseConfig를 확인해주세요.");
+}
 
 // 유류비 기준 단가 (원/km)
 const FUEL_RATE_PERSONAL = 200; 
@@ -23,29 +49,49 @@ function getInitialFormData() {
 }
 
 // ----------------------------------------------------------------------
-// [컴포넌트] 로그인 모달 (팝업 형태) - 역할 구분 추가
+// [컴포넌트] 로그인 모달
 // ----------------------------------------------------------------------
 function LoginModal({ onClose, onLogin, targetRole }) {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
-    const users = JSON.parse(localStorage.getItem('users')) || [{ id: 'admin', password: 'admin', name: '관리자', role: 'admin' }];
-    const user = users.find(u => u.id === userId && u.password === password);
-    
-    if (user) {
-      // 역할 검증 로직 추가
-      if (targetRole && user.role !== targetRole) {
-        setError(targetRole === 'admin' 
-          ? '관리자 계정만 로그인할 수 있습니다.' 
-          : '일반 직원 계정만 로그인할 수 있습니다.');
+  const handleSubmit = async () => {
+    if (!db) {
+      setError("Firebase 설정이 필요합니다.");
+      return;
+    }
+    setLoading(true);
+    try {
+      // 관리자(admin)는 DB에 없어도 하드코딩으로 로그인 허용 (초기 세팅용)
+      if (userId === 'admin' && password === 'admin') {
+        onLogin({ id: 'admin', name: '관리자', role: 'admin' });
+        onClose();
         return;
       }
-      onLogin(user);
-      onClose();
-    } else {
-      setError('아이디 또는 비밀번호가 올바르지 않습니다.');
+
+      // Firestore에서 유저 조회
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("id", "==", userId), where("password", "==", password));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const userData = querySnapshot.docs[0].data();
+        if (targetRole && userData.role !== targetRole) {
+          setError(targetRole === 'admin' ? '관리자 계정만 로그인 가능합니다.' : '직원 계정만 로그인 가능합니다.');
+        } else {
+          onLogin(userData);
+          onClose();
+        }
+      } else {
+        setError('아이디 또는 비밀번호가 올바르지 않습니다.');
+      }
+    } catch (err) {
+      console.error(err);
+      setError("로그인 중 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -61,47 +107,20 @@ function LoginModal({ onClose, onLogin, targetRole }) {
           <h2 className="text-2xl font-bold text-gray-800">
             {targetRole === 'admin' ? '관리자 로그인' : '일반 직원 로그인'}
           </h2>
-          <p className="text-gray-500 mt-2 text-sm">
-            {targetRole === 'admin' ? '관리자 계정으로 접속합니다.' : '보고서 작성을 위해 로그인해주세요.'}
-          </p>
         </div>
 
         {error && <div className="mb-4 p-3 bg-red-50 text-red-500 text-sm rounded-lg border border-red-100 flex items-center gap-2"><AlertCircle size={16}/>{error}</div>}
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">아이디</label>
-            <input 
-              type="text" 
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
-              placeholder="아이디 입력"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
-            <input 
-              type="password" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
-              placeholder="비밀번호 입력"
-            />
-          </div>
-          <button 
-            onClick={handleSubmit}
-            className={`w-full text-white py-3.5 rounded-lg font-bold transition shadow-lg mt-2 ${targetRole === 'admin' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`}
-          >
-            로그인
+          <input type="text" value={userId} onChange={(e) => setUserId(e.target.value)} className="w-full p-3 border rounded-lg outline-none" placeholder="아이디" />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSubmit()} className="w-full p-3 border rounded-lg outline-none" placeholder="비밀번호" />
+          <button onClick={handleSubmit} disabled={loading} className={`w-full text-white py-3.5 rounded-lg font-bold transition shadow-lg mt-2 flex justify-center items-center ${targetRole === 'admin' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
+            {loading ? <Loader className="animate-spin" /> : '로그인'}
           </button>
         </div>
         
         {targetRole === 'admin' && (
-          <div className="mt-6 text-center text-sm text-gray-400">
-            * 초기 관리자: admin / admin
-          </div>
+          <div className="mt-6 text-center text-sm text-gray-400">* 초기 관리자: admin / admin</div>
         )}
       </div>
     </div>
@@ -109,7 +128,7 @@ function LoginModal({ onClose, onLogin, targetRole }) {
 }
 
 // ----------------------------------------------------------------------
-// [컴포넌트] 기타 모달들
+// [컴포넌트] 모달들
 // ----------------------------------------------------------------------
 function RejectModal({ onClose, onConfirm }) {
   const [reason, setReason] = useState('');
@@ -117,15 +136,10 @@ function RejectModal({ onClose, onConfirm }) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 backdrop-blur-sm">
       <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-sm">
         <h3 className="text-lg font-bold mb-4 text-red-600 flex items-center gap-2"><X size={20}/> 반려 사유 작성</h3>
-        <textarea 
-          className="w-full p-3 border border-gray-300 rounded-lg h-32 resize-none focus:ring-2 focus:ring-red-500 outline-none mb-4"
-          placeholder="반려 사유를 입력하세요..."
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-        />
+        <textarea className="w-full p-3 border rounded-lg h-32 resize-none outline-none mb-4" placeholder="반려 사유 입력" value={reason} onChange={(e) => setReason(e.target.value)} />
         <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition font-medium">취소</button>
-          <button onClick={() => onConfirm(reason)} className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-bold">반려하기</button>
+          <button onClick={onClose} className="flex-1 py-2 bg-gray-100 rounded-lg font-medium">취소</button>
+          <button onClick={() => onConfirm(reason)} className="flex-1 py-2 bg-red-600 text-white rounded-lg font-bold">반려하기</button>
         </div>
       </div>
     </div>
@@ -138,16 +152,10 @@ function ResubmitCommentModal({ onClose, onConfirm }) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 backdrop-blur-sm">
       <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-sm">
         <h3 className="text-lg font-bold mb-4 text-blue-600 flex items-center gap-2"><MessageSquare size={20}/> 재기안 코멘트</h3>
-        <p className="text-sm text-gray-500 mb-2">수정된 사항을 간단히 적어주세요.</p>
-        <textarea 
-          className="w-full p-3 border border-gray-300 rounded-lg h-32 resize-none focus:ring-2 focus:ring-blue-500 outline-none mb-4"
-          placeholder="예: 지출 내역 금액 수정 완료"
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-        />
+        <textarea className="w-full p-3 border rounded-lg h-32 resize-none outline-none mb-4" placeholder="수정 사항 입력" value={comment} onChange={(e) => setComment(e.target.value)} />
         <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition font-medium">취소</button>
-          <button onClick={() => onConfirm(comment)} className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold">제출하기</button>
+          <button onClick={onClose} className="flex-1 py-2 bg-gray-100 rounded-lg font-medium">취소</button>
+          <button onClick={() => onConfirm(comment)} className="flex-1 py-2 bg-blue-600 text-white rounded-lg font-bold">제출하기</button>
         </div>
       </div>
     </div>
@@ -157,28 +165,42 @@ function ResubmitCommentModal({ onClose, onConfirm }) {
 function UserManagementModal({ onClose }) {
   const [users, setUsers] = useState([]);
   const [newUser, setNewUser] = useState({ id: '', password: '', name: '', role: 'employee' });
+  const [loading, setLoading] = useState(false);
+
+  const fetchUsers = async () => {
+    if (!db) return;
+    const querySnapshot = await getDocs(collection(db, "users"));
+    const loadedUsers = querySnapshot.docs.map(doc => doc.data());
+    // admin 계정은 Firestore에 없어도 리스트에 보이게 처리 (선택사항)
+    setUsers(loadedUsers);
+  };
 
   useEffect(() => {
-    const loadedUsers = JSON.parse(localStorage.getItem('users')) || [];
-    setUsers(loadedUsers);
+    fetchUsers();
   }, []);
 
-  const saveUsers = (updatedUsers) => {
-    setUsers(updatedUsers);
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
-  };
-
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     if (!newUser.id || !newUser.password || !newUser.name) return alert('모든 정보를 입력해주세요.');
-    if (users.some(u => u.id === newUser.id)) return alert('이미 존재하는 아이디입니다.');
-    saveUsers([...users, newUser]);
-    setNewUser({ id: '', password: '', name: '', role: 'employee' });
+    setLoading(true);
+    try {
+      // ID를 문서 ID로 사용하여 중복 방지
+      await setDoc(doc(db, "users", newUser.id), newUser);
+      alert("계정이 생성되었습니다.");
+      fetchUsers();
+      setNewUser({ id: '', password: '', name: '', role: 'employee' });
+    } catch (e) {
+      console.error(e);
+      alert("계정 생성 실패");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteUser = (id) => {
-    if (id === 'admin') return alert('최고 관리자 계정은 삭제할 수 없습니다.');
+  const handleDeleteUser = async (userId) => {
+    if (userId === 'admin') return alert('기본 관리자 계정은 삭제할 수 없습니다.');
     if (confirm('정말 삭제하시겠습니까?')) {
-      saveUsers(users.filter(u => u.id !== id));
+      await deleteDoc(doc(db, "users", userId));
+      fetchUsers();
     }
   };
 
@@ -186,7 +208,7 @@ function UserManagementModal({ onClose }) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 backdrop-blur-sm">
       <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-2xl h-[80vh] flex flex-col">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold flex items-center gap-2"><Users className="text-blue-600"/> 계정 관리</h2>
+          <h2 className="text-xl font-bold flex items-center gap-2"><Users className="text-blue-600"/> 계정 관리 (DB 연동)</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X size={24} className="text-gray-500"/></button>
         </div>
         <div className="flex flex-col md:flex-row gap-2 mb-6 p-4 bg-gray-50 rounded-lg">
@@ -197,7 +219,9 @@ function UserManagementModal({ onClose }) {
             <option value="employee">직원</option>
             <option value="admin">관리자</option>
           </select>
-          <button onClick={handleAddUser} className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 whitespace-nowrap">등록</button>
+          <button onClick={handleAddUser} disabled={loading} className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 whitespace-nowrap">
+            {loading ? '저장중...' : '등록'}
+          </button>
         </div>
         <div className="flex-1 overflow-auto border rounded-lg">
           <table className="w-full text-sm text-left">
@@ -205,11 +229,14 @@ function UserManagementModal({ onClose }) {
               <tr><th className="p-3">이름</th><th className="p-3">아이디</th><th className="p-3">비밀번호</th><th className="p-3">권한</th><th className="p-3 text-center">관리</th></tr>
             </thead>
             <tbody className="divide-y">
+              <tr className="bg-purple-50">
+                <td className="p-3">관리자(기본)</td><td className="p-3">admin</td><td className="p-3">admin</td><td className="p-3"><span className="px-2 py-1 bg-purple-200 text-purple-800 rounded text-xs">시스템</span></td><td className="p-3"></td>
+              </tr>
               {users.map(u => (
                 <tr key={u.id} className="hover:bg-gray-50">
-                  <td className="p-3">{u.name}</td><td className="p-3 text-gray-500">{u.id}</td><td className="p-3 font-mono">****</td>
+                  <td className="p-3">{u.name}</td><td className="p-3 text-gray-500">{u.id}</td><td className="p-3">{u.password}</td>
                   <td className="p-3"><span className={`px-2 py-1 rounded text-xs ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>{u.role === 'admin' ? '관리자' : '직원'}</span></td>
-                  <td className="p-3 text-center">{u.id !== 'admin' && <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={16}/></button>}</td>
+                  <td className="p-3 text-center"><button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={16}/></button></td>
                 </tr>
               ))}
             </tbody>
@@ -220,29 +247,20 @@ function UserManagementModal({ onClose }) {
   );
 }
 
-// ----------------------------------------------------------------------
-// [관리자 대시보드] - 검색 및 필터링 기능 추가
-// ----------------------------------------------------------------------
 function AdminDashboard({ reports, onViewReport, onChangePassword, onLogout }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'pending', 'approved', 'rejected'
+  const [filterStatus, setFilterStatus] = useState('all'); 
 
-  // 필터링 로직
   const filteredReports = reports.filter(report => {
-    // 1. 검색어 필터 (이름, 장소, 목적)
     const lowerSearch = searchTerm.toLowerCase();
     const matchesSearch = 
       report.travelerName.toLowerCase().includes(lowerSearch) ||
       report.location.toLowerCase().includes(lowerSearch) ||
       report.purpose.toLowerCase().includes(lowerSearch);
-
-    // 2. 상태 필터
     const matchesStatus = filterStatus === 'all' || report.status === filterStatus;
-
     return matchesSearch && matchesStatus;
   });
 
-  // 상태 뱃지 렌더링 (테이블용)
   const StatusBadge = ({ status }) => {
     switch(status) {
       case 'approved': return <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold border border-green-200">승인</span>;
@@ -270,85 +288,39 @@ function AdminDashboard({ reports, onViewReport, onChangePassword, onLogout }) {
       <section className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         <div className="p-5 bg-gray-50 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
           <h3 className="text-lg font-bold flex items-center gap-2 text-gray-700">
-            <FileText className="text-blue-600" size={20} /> 제출된 보고서 목록
+            <FileText className="text-blue-600" size={20} /> 제출된 보고서 목록 (DB 연동됨)
           </h3>
-          
-          {/* 검색 및 필터링 UI */}
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="이름, 장소, 목적 검색..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none w-full sm:w-64 text-sm"
-              />
+              <input type="text" placeholder="검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2 border rounded-lg w-full sm:w-64 text-sm" />
             </div>
             <div className="relative">
               <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-              <select 
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none appearance-none bg-white w-full sm:w-auto text-sm cursor-pointer"
-              >
-                <option value="all">전체 상태</option>
-                <option value="pending">대기 중</option>
-                <option value="approved">승인됨</option>
-                <option value="rejected">반려됨</option>
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="pl-10 pr-8 py-2 border rounded-lg bg-white w-full sm:w-auto text-sm">
+                <option value="all">전체</option><option value="pending">대기</option><option value="approved">승인</option><option value="rejected">반려</option>
               </select>
             </div>
           </div>
         </div>
-
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left text-gray-600 min-w-[800px]">
             <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b">
-              <tr>
-                <th scope="col" className="px-6 py-4 font-bold">상태</th>
-                <th scope="col" className="px-6 py-4 font-bold">제출일</th>
-                <th scope="col" className="px-6 py-4 font-bold">출장자</th>
-                <th scope="col" className="px-6 py-4 font-bold">출장지</th>
-                <th scope="col" className="px-6 py-4 font-bold">기간</th>
-                <th scope="col" className="px-6 py-4 font-bold text-center">관리</th>
-              </tr>
+              <tr><th className="px-6 py-4">상태</th><th className="px-6 py-4">제출일</th><th className="px-6 py-4">출장자</th><th className="px-6 py-4">출장지</th><th className="px-6 py-4">기간</th><th className="px-6 py-4 text-center">관리</th></tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredReports.length > 0 ? (
-                filteredReports.map((report) => (
-                  <tr key={report.id} className="bg-white hover:bg-blue-50 transition-colors group">
-                    <td className="px-6 py-4 whitespace-nowrap"><StatusBadge status={report.status} /></td>
-                    <td className="px-6 py-4 whitespace-nowrap">{new Date(report.submittedAt).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 font-bold text-gray-900">{report.travelerName}</td>
-                    <td className="px-6 py-4 truncate max-w-[200px] text-gray-700">{report.location}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-600">{report.startDate} ~ {report.endDate}</td>
-                    <td className="px-6 py-4 text-center">
-                      <button 
-                        onClick={() => onViewReport(report)} 
-                        className="inline-flex items-center gap-1 px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition text-xs font-bold shadow-sm"
-                      >
-                        <FileText size={12} /> 상세보기
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="6" className="px-6 py-16 text-center text-gray-400">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="p-4 bg-gray-50 rounded-full">
-                        <FileText size={48} className="text-gray-300" />
-                      </div>
-                      <p className="text-base">조건에 맞는 보고서가 없습니다.</p>
-                    </div>
-                  </td>
+            <tbody className="divide-y">
+              {filteredReports.map((report) => (
+                <tr key={report.id} className="hover:bg-blue-50">
+                  <td className="px-6 py-4"><StatusBadge status={report.status} /></td>
+                  <td className="px-6 py-4">{new Date(report.submittedAt).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 font-bold">{report.travelerName}</td>
+                  <td className="px-6 py-4 truncate max-w-[200px]">{report.location}</td>
+                  <td className="px-6 py-4">{report.startDate} ~ {report.endDate}</td>
+                  <td className="px-6 py-4 text-center"><button onClick={() => onViewReport(report)} className="inline-flex items-center gap-1 px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">상세보기</button></td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </table>
-        </div>
-        <div className="p-4 bg-gray-50 border-t border-gray-200 text-right text-xs text-gray-500">
-          검색 결과: {filteredReports.length} / 전체: {reports.length}
         </div>
       </section>
     </div>
@@ -356,16 +328,17 @@ function AdminDashboard({ reports, onViewReport, onChangePassword, onLogout }) {
 }
 
 // ----------------------------------------------------------------------
-// [메인] App 컴포넌트
+// [메인] App 컴포넌트 (Firebase 로직 통합)
 // ----------------------------------------------------------------------
 export default function App() {
   const [user, setUser] = useState(null); 
   const [view, setView] = useState('dashboard');
   const [reports, setReports] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [loading, setLoading] = useState(false);
   
   // 모달 상태
-  const [loginModalTarget, setLoginModalTarget] = useState(null); // 'admin' | 'employee' | null
+  const [loginModalTarget, setLoginModalTarget] = useState(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showResubmitModal, setShowResubmitModal] = useState(false);
   const [showUserManageModal, setShowUserManageModal] = useState(false);
@@ -374,23 +347,34 @@ export default function App() {
   const [formData, setFormData] = useState(getInitialFormData());
   const [editingId, setEditingId] = useState(null);
 
-  // 초기 데이터 로드
+  // Firestore에서 보고서 불러오기
+  const fetchReports = async () => {
+    if (!db) return;
+    setLoading(true);
+    try {
+      const q = query(collection(db, "reports"));
+      const querySnapshot = await getDocs(q);
+      const loadedReports = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      // 최신순 정렬
+      loadedReports.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+      setReports(loadedReports);
+    } catch (e) {
+      console.error("보고서 불러오기 실패:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const storedUsers = localStorage.getItem('users');
-    if (!storedUsers) {
-      localStorage.setItem('users', JSON.stringify([{ id: 'admin', password: 'admin', name: '관리자', role: 'admin' }]));
-    }
-    const storedReports = localStorage.getItem('reports');
-    if (storedReports) {
-      setReports(JSON.parse(storedReports));
-    }
+    fetchReports();
   }, []);
 
   const handleLogin = (loggedInUser) => {
     setUser(loggedInUser);
     setFormData(prev => ({ ...prev, travelerName: loggedInUser.name }));
     if (loggedInUser.role === 'employee') {
-      const myReports = JSON.parse(localStorage.getItem('reports') || '[]').filter(r => r.userId === loggedInUser.id);
+      // 내 보고서 중 확인 안 된 반려 건 찾기
+      const myReports = reports.filter(r => r.userId === loggedInUser.id);
       const rejected = myReports.find(r => r.status === 'rejected' && !r.checked);
       if (rejected) {
         setRejectionNotification(rejected);
@@ -403,25 +387,59 @@ export default function App() {
     setUser(null);
     setView('dashboard');
     setSelectedReport(null);
-    setRejectionNotification(null);
     setEditingId(null);
     setFormData(getInitialFormData());
   };
 
-  const saveReportsToStorage = (newReports) => {
-    setReports(newReports);
-    localStorage.setItem('reports', JSON.stringify(newReports));
+  // Firestore 업데이트 (추가/수정)
+  const saveReportToDB = async (reportData, isEdit = false) => {
+    if (!db) {
+      alert("데이터베이스 연결 오류");
+      return;
+    }
+    try {
+      if (isEdit) {
+        // 수정: 기존 문서 업데이트
+        const reportRef = doc(db, "reports", reportData.id);
+        await setDoc(reportRef, reportData); // setDoc은 덮어쓰기 (merge 옵션 없이 전체 교체)
+      } else {
+        // 신규: addDoc은 ID 자동 생성. 우리는 ID를 관리하므로 setDoc 사용하거나 addDoc 후 ID 주입
+        // 여기서는 편의상 timestamp를 ID 문자열로 사용하여 문서 생성
+        const newId = String(Date.now());
+        const reportWithId = { ...reportData, id: newId };
+        await setDoc(doc(db, "reports", newId), reportWithId);
+      }
+      fetchReports(); // 목록 갱신
+    } catch (e) {
+      console.error("저장 실패", e);
+      alert("저장 중 오류가 발생했습니다.");
+    }
   };
 
-  const updateReport = (id, updates) => {
-    const updated = reports.map(r => r.id === id ? { ...r, ...updates } : r);
-    saveReportsToStorage(updated);
+  const updateReport = async (id, updates) => {
+    if (!db) return;
+    try {
+      const reportRef = doc(db, "reports", id);
+      await updateDoc(reportRef, updates);
+      fetchReports();
+    } catch (e) {
+      console.error("업데이트 실패", e);
+    }
+  };
+
+  const deleteReportFromDB = async (id) => {
+    if (!db) return;
+    try {
+      await deleteDoc(doc(db, "reports", id));
+      fetchReports();
+    } catch (e) {
+      console.error("삭제 실패", e);
+    }
   };
 
   // --- 작성 기능 ---
   const handleCreateReportClick = () => {
     if (!user) {
-      // 비로그인 상태에서 작성 시도 시 '직원 로그인'으로 유도
       setLoginModalTarget('employee');
     } else {
       startWrite();
@@ -459,6 +477,11 @@ export default function App() {
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // 주의: Firestore 용량 제한(1MB) 때문에 큰 이미지는 에러날 수 있음. 실무에선 Storage 사용 필수.
+      if (file.size > 1000000) {
+        alert("이미지 용량이 너무 큽니다. (1MB 이하 권장)");
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => setFormData(prev => ({ ...prev, receipts: [...prev.receipts, { id: Date.now(), name: file.name, url: reader.result }] }));
       reader.readAsDataURL(file);
@@ -468,25 +491,20 @@ export default function App() {
   const calculateTotal = (data = formData) => data.expenses.reduce((sum, item) => sum + item.amount, 0) + data.fuelCost;
 
   // --- 제출/수정/삭제 등 액션 ---
-  const submitReport = (comment = '') => {
+  const submitReport = async (comment = '') => {
     if (!formData.startDate || !formData.endDate) return alert('날짜를 입력해주세요.');
+    
     const newReport = {
       ...formData,
-      id: editingId || Date.now(),
       userId: user.id,
       submittedAt: editingId ? formData.submittedAt : new Date().toISOString(),
       status: 'pending', 
-      resubmissionComment: comment || formData.resubmissionComment,
+      resubmissionComment: comment || formData.resubmissionComment || '',
       rejectionReason: null 
     };
-    let updatedReports;
-    if (editingId) {
-      updatedReports = reports.map(r => r.id === editingId ? newReport : r);
-    } else {
-      updatedReports = [newReport, ...reports];
-    }
-    saveReportsToStorage(updatedReports);
-    if (!editingId) localStorage.removeItem('tripReportDraft');
+
+    await saveReportToDB(newReport, !!editingId);
+    
     alert(editingId ? '수정되었습니다.' : '제출되었습니다.');
     setEditingId(null);
     setSelectedReport(null);
@@ -509,12 +527,11 @@ export default function App() {
   };
 
   const handleStartAdminEdit = () => { if (selectedReport) handleEdit(selectedReport); };
-  const handleDelete = () => { if(confirm('삭제하시겠습니까?')) { saveReportsToStorage(reports.filter(r => r.id !== selectedReport.id)); alert('삭제되었습니다.'); setView('dashboard'); } };
+  const handleDelete = () => { if(confirm('삭제하시겠습니까?')) { deleteReportFromDB(selectedReport.id); alert('삭제되었습니다.'); setView('dashboard'); } };
   const handleApprove = () => { if(confirm('승인하시겠습니까?')) { updateReport(selectedReport.id, { status: 'approved' }); alert('승인되었습니다.'); setView('dashboard'); } };
   const handleRejectClick = () => setShowRejectModal(true);
   const confirmReject = (reason) => { if (!reason) return alert('사유 입력 필요'); updateReport(selectedReport.id, { status: 'rejected', rejectionReason: reason, checked: false }); setShowRejectModal(false); alert('반려되었습니다.'); setView('dashboard'); };
-  const handleResetForm = () => { if(window.confirm('초기화하시겠습니까?')) { setFormData({ ...getInitialFormData(), travelerName: user ? user.name : '' }); localStorage.removeItem('tripReportDraft'); } };
-  const handleSaveDraft = () => { localStorage.setItem('tripReportDraft', JSON.stringify({ ...formData, receipts: [] })); alert('임시 저장되었습니다.'); };
+  const handleResetForm = () => { if(window.confirm('초기화하시겠습니까?')) { setFormData({ ...getInitialFormData(), travelerName: user ? user.name : '' }); } };
   const handlePrint = () => window.print();
   const formatCurrency = (num) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(num);
 
@@ -534,7 +551,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans print:bg-white flex flex-col items-center">
-      {/* 상단 헤더 */}
       <header className="bg-gradient-to-r from-blue-700 to-blue-600 text-white shadow-lg print-hidden sticky top-0 z-20 w-full">
         <div className="w-full max-w-[1920px] mx-auto px-4 md:px-8 py-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
@@ -546,7 +562,6 @@ export default function App() {
           <div className="flex gap-2">
             {!user ? (
               <>
-                {/* 로그인 버튼 분리: 직원용 / 관리자용 */}
                 <button onClick={() => setLoginModalTarget('employee')} className="text-sm bg-white text-blue-700 hover:bg-blue-50 px-4 py-1.5 rounded font-bold flex items-center gap-1 transition shadow-sm">
                   <Briefcase size={14}/> 직원 로그인
                 </button>
@@ -562,8 +577,6 @@ export default function App() {
       </header>
 
       <main className="w-full max-w-[1920px] mx-auto p-4 md:p-8 print:p-0 flex-grow">
-        
-        {/* --- [대시보드] --- */}
         {view === 'dashboard' && (
           <div className="animate-fade-in space-y-8">
             <div className="flex justify-between items-center">
@@ -582,12 +595,11 @@ export default function App() {
               </div>
             </div>
 
-            {/* 관리자 모드일 때만 AdminDashboard(필터링 포함) 렌더링, 아니면 기존 테이블 */}
             {user?.role === 'admin' ? (
               <AdminDashboard 
                 reports={reports} 
                 onViewReport={(report) => { setSelectedReport(report); setView('preview'); }}
-                onChangePassword={() => alert('기능 준비중입니다.')} // 임시
+                onChangePassword={() => alert('기능 준비중입니다.')}
                 onLogout={handleLogout}
               />
             ) : (
@@ -624,8 +636,7 @@ export default function App() {
                             <td className="px-6 py-4 text-gray-500">{report.startDate} ~ {report.endDate}</td>
                             <td className="px-6 py-4 text-center">
                               <button onClick={() => { setSelectedReport(report); setView('preview'); }} className="bg-white border border-blue-200 text-blue-600 px-3 py-1 rounded hover:bg-blue-50 font-bold text-xs shadow-sm">상세보기</button>
-                              {/* [추가] 대기 상태일 때 바로 수정 버튼 표시 (직원용) */}
-                              {user.role === 'employee' && report.status === 'pending' && (
+                              {user.role === 'employee' && (report.status === 'pending' || report.status === 'rejected') && (
                                 <button onClick={() => handleEdit(report)} className="ml-2 bg-white border border-green-200 text-green-600 px-3 py-1 rounded hover:bg-green-50 font-bold text-xs shadow-sm">수정</button>
                               )}
                             </td>
@@ -734,7 +745,6 @@ export default function App() {
                     )}
                   </>
                 )}
-                {/* [수정] 대기(pending) 상태이거나 반려(rejected) 상태일 때 수정 버튼 표시 */}
                 {user?.role === 'employee' && (selectedReport.status === 'rejected' || selectedReport.status === 'pending') && (
                   <button onClick={() => handleEdit(selectedReport)} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold flex items-center gap-2"><Edit size={16}/> {selectedReport.status === 'rejected' ? '수정 및 재제출' : '내용 수정'}</button>
                 )}
@@ -742,7 +752,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* 반려 사유 (화면 표시용) */}
             {selectedReport.status === 'rejected' && selectedReport.rejectionReason && (
               <div className="max-w-[210mm] mx-auto mb-6 bg-red-50 border border-red-200 p-4 rounded-lg flex items-start gap-3 print-hidden">
                 <AlertCircle className="text-red-600 flex-shrink-0 mt-1"/>
@@ -750,13 +759,11 @@ export default function App() {
               </div>
             )}
             
-            {/* A4 서식 (내용 생략 없이 그대로 유지) */}
             <div className="a4-preview-container print-container relative">
               {selectedReport.status === 'approved' && <div className="absolute top-10 right-10 border-4 border-green-600 text-green-600 rounded-full w-32 h-32 flex items-center justify-center transform rotate-[-15deg] opacity-80 pointer-events-none"><div className="text-center"><div className="text-sm font-bold border-b border-green-600 pb-1 mb-1">{new Date().toLocaleDateString()}</div><div className="text-2xl font-black">승 인</div><div className="text-xs font-bold mt-1">HENCE 관리자</div></div></div>}
               {selectedReport.status === 'rejected' && <div className="absolute top-10 right-10 border-4 border-red-600 text-red-600 rounded-full w-32 h-32 flex items-center justify-center transform rotate-[-15deg] opacity-80 pointer-events-none"><div className="text-2xl font-black">반 려</div></div>}
               <h1 className="text-3xl font-bold text-center mb-10 underline decoration-4 decoration-gray-300 underline-offset-8">출 장 보 고 서</h1>
 
-              {/* [추가] 재기안 코멘트를 A4 보고서 내부 상단에 포함 */}
               {selectedReport.resubmissionComment && (
                 <div className="mb-8 p-4 bg-blue-50 border-l-4 border-blue-500 text-blue-800 rounded-r text-sm">
                    <h4 className="font-bold flex items-center gap-2 mb-1"><MessageSquare size={16}/> 재기안 수정 사유</h4>
@@ -792,7 +799,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 모달들 */}
         {loginModalTarget && <LoginModal onClose={() => setLoginModalTarget(null)} onLogin={handleLogin} targetRole={loginModalTarget} />}
         {showRejectModal && <RejectModal onClose={() => setShowRejectModal(false)} onConfirm={confirmReject} />}
         {showResubmitModal && <ResubmitCommentModal onClose={() => setShowResubmitModal(false)} onConfirm={(comment) => { setShowResubmitModal(false); if(confirm('제출하시겠습니까?')) submitReport(comment); }} />}
